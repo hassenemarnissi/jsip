@@ -1359,9 +1359,11 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
         SIPServerTransaction tr = this.getInviteTransaction();
         if (tr != null) {
             if (tr.getCSeq() == cseqNumber) {
+                logger.logDebug("Transaction cseq matches");
                 acquireTimerTaskSem();
                 try {
                     if (this.timerTask != null) {
+                        logger.logDebug("Cancelling timer due to received ACK");
                         this.getStack().getTimer().cancel(timerTask);
                         this.timerTask = null;
                     }
@@ -2052,6 +2054,14 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
             logger.logDebug(
                     "setRemoteSeqno " + this + "/" + rCseq);
+
+        // Sequence numbers should only increase - make sure that we don't 
+        // mistakenly decrease
+        if (rCseq < remoteSequenceNumber) {
+            logger.logDebug("Ignoring request to set remote seq no");
+            return;
+        }
+
         this.remoteSequenceNumber = rCseq;
     }
 
