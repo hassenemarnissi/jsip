@@ -221,6 +221,8 @@ public class UDPMessageProcessor extends MessageProcessor implements Runnable {
                 byte message[] = new byte[bufsize];
                 DatagramPacket packet = new DatagramPacket(message, bufsize);
                 sock.receive(packet);
+                if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
+                    logger.logDebug("Received UDP packet");
                 
                 // Count of # of packets in process.
                 // this.useCount++;
