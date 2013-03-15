@@ -25,8 +25,6 @@
 */
 package gov.nist.core.net;
 
-import gov.nist.javax.sip.SipStackImpl;
-
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.DatagramSocket;
@@ -210,8 +208,5 @@ public class DefaultNetworkLayer implements NetworkLayer {
 //    else
 //        return new Socket(address, port);
     }
-
-	@Override
-	public void setSipStack(SipStackImpl sipStackImpl) {}
 
 }

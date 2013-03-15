@@ -25,8 +25,6 @@
 */
 package gov.nist.core.net;
 
-import gov.nist.javax.sip.SipStackImpl;
-
 import java.io.IOException;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
@@ -152,9 +150,4 @@ public interface NetworkLayer {
     public DatagramSocket createDatagramSocket(int port, InetAddress laddr)
             throws SocketException;
 
-    /**
-     * Set the sip stack impl so that the network layer can access it to query properties
-     * @param sipStackImpl
-     */
-    public void setSipStack(SipStackImpl sipStackImpl);
 }
