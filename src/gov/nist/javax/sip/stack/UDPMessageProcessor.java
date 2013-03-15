@@ -89,7 +89,7 @@ public class UDPMessageProcessor extends MessageProcessor implements Runnable {
     /**
      * A list of message channels that we have started.
      */
-    protected LinkedList messageChannels;
+    protected LinkedList<UDPMessageChannel> messageChannels;
 
     /**
      * Max # of udp message channels
@@ -195,7 +195,7 @@ public class UDPMessageProcessor extends MessageProcessor implements Runnable {
      */
     public void run() {
         // Check for running flag.
-        this.messageChannels = new LinkedList();
+        this.messageChannels = new LinkedList<UDPMessageChannel>();
         // start all our messageChannels (unless the thread pool size is
         // infinity.
         if (sipStack.threadPoolSize != -1) {
@@ -203,7 +203,6 @@ public class UDPMessageProcessor extends MessageProcessor implements Runnable {
                 UDPMessageChannel channel = new UDPMessageChannel(sipStack,
                         this, ((SipStackImpl)sipStack).getStackName() + "-UDPMessageChannelThread-" + i);
                 this.messageChannels.add(channel);
-
             }
         }
 
@@ -222,7 +221,9 @@ public class UDPMessageProcessor extends MessageProcessor implements Runnable {
                 DatagramPacket packet = new DatagramPacket(message, bufsize);
                 sock.receive(packet);
                 if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
-                    logger.logDebug("Received UDP packet");
+                    logger.logDebug("UDPMessageProcessor: Received packet from: " + 
+                                    packet.getAddress().toString() + ":" +
+                                    packet.getPort());
                 
                 // Count of # of packets in process.
                 // this.useCount++;
@@ -233,36 +234,36 @@ public class UDPMessageProcessor extends MessageProcessor implements Runnable {
                     // condition you will have to call notifyAll instead of
                     // notify below.
 
-                    this.messageQueue.offer(new DatagramQueuedMessageDispatch(packet, System.currentTimeMillis()));                 
+                    this.messageQueue.add(new DatagramQueuedMessageDispatch(packet, System.currentTimeMillis()));                 
 
                 } else {
                     new UDPMessageChannel(sipStack, this, packet);
                 }
             } catch (SocketTimeoutException ex) {
-              // This socket timeout alows us to ping the thread auditor periodically
+              // This socket timeout allows us to ping the thread auditor periodically
             } catch (SocketException ex) {
                 if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
-                    logger
-                            .logDebug("UDPMessageProcessor: Stopping");
+                    logger.logDebug("UDPMessageProcessor: Stopping");
                 isRunning = false;
             } catch (IOException ex) {
                 isRunning = false;
                 ex.printStackTrace();
                 if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
-                    logger
-                            .logDebug("UDPMessageProcessor: Got an IO Exception");
+                    logger.logDebug("UDPMessageProcessor: Got an IO Exception");
             } catch (Exception ex) {
-                if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
-                    logger
-                            .logDebug("UDPMessageProcessor: Unexpected Exception - quitting");
+                if (logger.isLoggingEnabled(LogWriter.TRACE_ERROR))
+                    logger.logError("UDPMessageProcessor: Unexpected Exception - quitting");
                 InternalErrorHandler.handleException(ex);
-                return;
+                isRunning = false;
             }
         }
+        
+        if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
+            logger.logDebug("UDPMessageProcessor: Exiting");
     }
 
     /**
-     * Shut down the message processor. Close the socket for recieving incoming
+     * Shut down the message processor. Close the socket for receiving incoming
      * messages.
      */
     public void stop() {

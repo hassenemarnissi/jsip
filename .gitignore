@@ -1,3 +1,5 @@
+# Ignore built JSIP jars
+jain*.jar
 # ignore .svn metadata files
 .svn
 # ignore Maven generated target folders
@@ -44,3 +46,6 @@ hs_err_pid*.log
 PutObjectStoreDirHere
 # ignore mvn-rpmbuild repo
 /.m2
+# Some other stuff created by builds
+TIMESTAMP
+version.txt
