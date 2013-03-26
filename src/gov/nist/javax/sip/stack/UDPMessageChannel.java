@@ -345,9 +345,9 @@ public class UDPMessageChannel extends MessageChannel implements
         // Do debug logging.
         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
             this.logger.logDebug(
-                    "UDPMessageChannel: processIncomingDataPacket : peerAddress = "
+                    "UDPMessageChannel: processIncomingDataPacket: peerAddress = "
                             + peerAddress.getHostAddress() + "/"
-                            + packet.getPort() + " Length = " + packetLength);
+                            + packet.getPort() + " length = " + packetLength);
 
         }
 
