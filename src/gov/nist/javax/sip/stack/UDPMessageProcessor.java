@@ -219,6 +219,8 @@ public class UDPMessageProcessor extends MessageProcessor implements Runnable {
                 int bufsize = this.maxMessageSize;
                 byte message[] = new byte[bufsize];
                 DatagramPacket packet = new DatagramPacket(message, bufsize);
+                if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
+                    logger.logDebug("About to call receive on UDP socket");
                 sock.receive(packet);
                 if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
                     logger.logDebug("UDPMessageProcessor: Received packet from: " + 
@@ -237,8 +239,12 @@ public class UDPMessageProcessor extends MessageProcessor implements Runnable {
                     this.messageQueue.add(new DatagramQueuedMessageDispatch(packet, System.currentTimeMillis()));                 
 
                 } else {
+                    if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
+                        logger.logDebug("Creating new UDPMessageChannel");
                     new UDPMessageChannel(sipStack, this, packet);
                 }
+                if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
+                    logger.logDebug("Passed packet onwards to message queue");
             } catch (SocketTimeoutException ex) {
               // This socket timeout allows us to ping the thread auditor periodically
             } catch (SocketException ex) {
