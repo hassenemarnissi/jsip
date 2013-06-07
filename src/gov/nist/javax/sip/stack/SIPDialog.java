@@ -3259,10 +3259,21 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
             return;
         }
 
+        if ( (this.lastResponseStatusCode != null) &&
+             (this.lastResponseStatusCode.intValue() / 100 > 1) &&
+             (statusCode / 100 == 1))
+        {
+            if (logger.isLoggingEnabled())
+                logger.logWarning("Attempting to send provisional response: " + statusCode
+                                     + "after a final response: " + this.lastResponseStatusCode);
+
+            return;
+        }
+
         if ( logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
         	logger.logStackTrace();
         }
-        // this.lastResponse = sipResponse;
+
         try {
             this.lastResponseStatusCode = Integer.valueOf(statusCode);
             // Issue 378 : http://java.net/jira/browse/JSIP-378
