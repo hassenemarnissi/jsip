@@ -33,6 +33,9 @@ import gov.nist.javax.sip.address.GenericURI;
 import gov.nist.javax.sip.address.SipUri;
 import gov.nist.javax.sip.address.TelURLImpl;
 import gov.nist.javax.sip.address.TelephoneNumber;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.text.ParseException;
 
 /**
@@ -752,6 +755,7 @@ public class URLParser extends Parser {
     protected String user() throws ParseException {
         if (debug)
             dbg_enter("user");
+        String userString;
         try {
             int startIdx = lexer.getPtr();
             while (lexer.hasMoreChars()) {
@@ -763,12 +767,24 @@ public class URLParser extends Parser {
                 } else
                     break;
             }
-            return lexer.getBuffer().substring(startIdx, lexer.getPtr());
+            userString = lexer.getBuffer().substring(startIdx, lexer.getPtr());
+            try {
+                // SIP usernames are percent-encoded so need to decode them
+                // here.  But the URLDecoder also replaces "+" with whitespace 
+                // so explicitly encode that here before decoding so we don't
+                // lose them. 
+                userString = URLDecoder.decode(userString.replace("+", "%2B"),
+                                               "UTF-8");
+            } catch(UnsupportedEncodingException e)
+            {
+                throw createParseException("Failed to URL decode username: " + 
+                                           userString);
+            }
         } finally {
             if (debug)
                 dbg_leave("user");
         }
-
+        return userString;
     }
 
     protected String password() throws ParseException {
