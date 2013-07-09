@@ -3259,9 +3259,9 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
             return;
         }
 
-        if ( (this.lastResponseStatusCode != null) &&
-             (this.lastResponseStatusCode.intValue() / 100 > 1) &&
-             (statusCode / 100 == 1))
+        if ((this.lastResponseStatusCode != null) &&
+            (this.lastResponseStatusCode.intValue() / 100 > 1) &&
+            (statusCode / 100 == 1))
         {
             if (logger.isLoggingEnabled())
                 logger.logWarning("Attempting to send provisional response: " + statusCode
@@ -3271,7 +3271,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
         }
 
         if ( logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
-        	logger.logStackTrace();
+            logger.logStackTrace();
         }
 
         try {
