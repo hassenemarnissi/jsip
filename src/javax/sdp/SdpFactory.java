@@ -70,12 +70,7 @@ public class SdpFactory extends Object {
         sessionDescriptionImpl.setVersion(ProtoVersionField);
 
         OriginField originImpl = null;
-        try {
-            originImpl = (OriginField) this.createOrigin("user", InetAddress
-                    .getLocalHost().getHostAddress());
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
+            originImpl = (OriginField) this.createOrigin("user", "localhost");
         sessionDescriptionImpl.setOrigin(originImpl);
 
         SessionNameField sessionNameImpl = new SessionNameField();
