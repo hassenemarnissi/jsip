@@ -29,41 +29,20 @@
 
 package gov.nist.javax.sip.stack;
 
-import gov.nist.core.CommonLogger;
-import gov.nist.core.InternalErrorHandler;
-import gov.nist.core.LogLevels;
-import gov.nist.core.LogWriter;
-import gov.nist.core.ServerLogger;
-import gov.nist.core.StackLogger;
-import gov.nist.core.ThreadAuditor;
-import gov.nist.javax.sip.SIPConstants;
-import gov.nist.javax.sip.header.CSeq;
-import gov.nist.javax.sip.header.CallID;
-import gov.nist.javax.sip.header.ContentLength;
-import gov.nist.javax.sip.header.From;
-import gov.nist.javax.sip.header.RequestLine;
-import gov.nist.javax.sip.header.StatusLine;
-import gov.nist.javax.sip.header.To;
-import gov.nist.javax.sip.header.Via;
-import gov.nist.javax.sip.message.SIPMessage;
-import gov.nist.javax.sip.message.SIPRequest;
-import gov.nist.javax.sip.message.SIPResponse;
-import gov.nist.javax.sip.parser.MessageParser;
-import gov.nist.javax.sip.parser.ParseExceptionListener;
+import gov.nist.core.*;
+import gov.nist.javax.sip.*;
+import gov.nist.javax.sip.header.*;
+import gov.nist.javax.sip.message.*;
+import gov.nist.javax.sip.parser.*;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.text.ParseException;
-import java.util.Arrays;
-import java.util.Hashtable;
-import java.util.concurrent.TimeUnit;
+import java.io.*;
+import java.net.*;
+import java.text.*;
+import java.util.*;
+import java.util.concurrent.*;
 
-import javax.sip.address.Hop;
-import javax.sip.message.Response;
+import javax.sip.address.*;
+import javax.sip.message.*;
 
 /*
  * Kim Kirby (Keyvoice) suggested that duplicate checking should be added to the
@@ -286,7 +265,7 @@ public class UDPMessageChannel extends MessageChannel implements
 
                 try {
                 	DatagramQueuedMessageDispatch work = null;
-                	// adding condition to avoid looping and taking too much CPU if the 
+                	// adding condition to avoid looping and taking too much CPU if the
                 	// auditing is not enabled
                 	if (sipStack.getThreadAuditor().isEnabled()) {
                 		work = udpMessageProcessor.messageQueue.poll(threadHandle
@@ -301,8 +280,8 @@ public class UDPMessageChannel extends MessageChannel implements
 	                	continue;
 	                } else {
 	                	packet = work.packet;
-		                this.incomingPacket = work.packet;						
-	                }	                	
+		                this.incomingPacket = work.packet;
+	                }
                 } catch (InterruptedException ex) {
 					if (!udpMessageProcessor.isRunning) {
 						return;
@@ -795,10 +774,7 @@ public class UDPMessageChannel extends MessageChannel implements
             if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
                 this.logger.logDebug(
                         "sendMessage " + peerAddress.getHostAddress() + "/"
-                                + peerPort + "\n" + "messageSize =  "
-                                + msg.length + " message = " + new String(msg));
-                this.logger
-                        .logDebug("*******************\n");
+                                + peerPort + " messageSize =  " + msg.length);
             }
 
         }
@@ -858,14 +834,8 @@ public class UDPMessageChannel extends MessageChannel implements
                         getClass().getName() + ":sendMessage: Dropping reply!");
             }
             throw new IOException("Receiver port not set ");
-        } else {
-            if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
-                this.logger.logDebug(
-                        ":sendMessage " + peerAddress.getHostAddress() + "/"
-                                + peerPort + "\n" + " messageSize = "
-                                + msg.length);
-            }
         }
+
         if (peerProtocol.compareToIgnoreCase("UDP") == 0) {
             DatagramPacket reply = new DatagramPacket(msg, msg.length,
                     peerAddress, peerPort);

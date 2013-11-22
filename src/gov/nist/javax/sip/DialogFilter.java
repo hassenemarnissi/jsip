@@ -28,47 +28,17 @@
  ******************************************************************************/
 package gov.nist.javax.sip;
 
-import gov.nist.core.CommonLogger;
-import gov.nist.core.HostPort;
-import gov.nist.core.InternalErrorHandler;
-import gov.nist.core.LogLevels;
-import gov.nist.core.LogWriter;
-import gov.nist.core.StackLogger;
-import gov.nist.javax.sip.address.SipUri;
-import gov.nist.javax.sip.header.Contact;
-import gov.nist.javax.sip.header.Event;
-import gov.nist.javax.sip.header.ReferTo;
-import gov.nist.javax.sip.header.RetryAfter;
-import gov.nist.javax.sip.header.Route;
-import gov.nist.javax.sip.header.RouteList;
-import gov.nist.javax.sip.message.MessageFactoryImpl;
-import gov.nist.javax.sip.message.SIPRequest;
-import gov.nist.javax.sip.message.SIPResponse;
-import gov.nist.javax.sip.stack.MessageChannel;
-import gov.nist.javax.sip.stack.SIPClientTransaction;
-import gov.nist.javax.sip.stack.SIPDialog;
-import gov.nist.javax.sip.stack.SIPServerTransaction;
-import gov.nist.javax.sip.stack.SIPTransaction;
-import gov.nist.javax.sip.stack.SIPTransactionStack;
-import gov.nist.javax.sip.stack.ServerRequestInterface;
-import gov.nist.javax.sip.stack.ServerResponseInterface;
+import gov.nist.core.*;
+import gov.nist.javax.sip.address.*;
+import gov.nist.javax.sip.header.*;
+import gov.nist.javax.sip.message.*;
+import gov.nist.javax.sip.stack.*;
 
-import java.io.IOException;
+import java.io.*;
 
-import javax.sip.ClientTransaction;
-import javax.sip.DialogState;
-import javax.sip.ListeningPoint;
-import javax.sip.ObjectInUseException;
-import javax.sip.RequestEvent;
-import javax.sip.ServerTransaction;
-import javax.sip.SipException;
-import javax.sip.SipProvider;
-import javax.sip.TransactionState;
-import javax.sip.header.EventHeader;
-import javax.sip.header.ReferToHeader;
-import javax.sip.header.ServerHeader;
-import javax.sip.message.Request;
-import javax.sip.message.Response;
+import javax.sip.*;
+import javax.sip.header.*;
+import javax.sip.message.*;
 
 /*
  * Bug fixes and Contributions by Lamine Brahimi, Andreas Bystrom, Bill Roome, John Martin, Daniel
@@ -85,13 +55,13 @@ import javax.sip.message.Response;
  * does not implement a JAIN-SIP interface). This is part of the glue that ties
  * together the NIST-SIP stack and event model with the JAIN-SIP stack. This is
  * strictly an implementation class.
- * 
+ *
  * @version 1.2 $Revision: 1.97 $ $Date: 2010-12-02 22:04:18 $
- * 
+ *
  * @author M. Ranganathan
  */
 class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
-	
+
 	private static StackLogger logger = CommonLogger.getLogger(DialogFilter.class);
 
     protected SIPTransaction transactionChannel;
@@ -107,7 +77,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
 
     /**
      * Send back a Request Pending response.
-     * 
+     *
      * @param sipRequest
      * @param transaction
      */
@@ -141,7 +111,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
 
     /**
      * Send a BAD REQUEST response.
-     * 
+     *
      * @param sipRequest
      * @param transaction
      * @param reasonPhrase
@@ -178,7 +148,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
 
     /**
      * Send a CALL OR TRANSACTION DOES NOT EXIST response.
-     * 
+     *
      * @param sipRequest
      * @param transaction
      */
@@ -214,10 +184,10 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
 
     /**
      * Send back a LOOP Detected Response.
-     * 
+     *
      * @param sipRequest
      * @param transaction
-     * 
+     *
      */
     private void sendLoopDetectedResponse(SIPRequest sipRequest,
             SIPServerTransaction transaction) {
@@ -244,13 +214,13 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
         }
 
     }
-    
+
     /**
      * Send back a Trying Response.
-     * 
+     *
      * @param sipRequest
      * @param transaction
-     * 
+     *
      */
     private void sendTryingResponse(SIPRequest sipRequest,
             SIPServerTransaction transaction) {
@@ -279,7 +249,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
 
     /**
      * Send back an error Response.
-     * 
+     *
      * @param sipRequest
      * @param transaction
      */
@@ -319,7 +289,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
      * Process a request. Check for various conditions in the dialog that can
      * result in the message being dropped. Possibly return errors for these
      * conditions.
-     * 
+     *
      * @exception SIPServerException
      *                is thrown when there is an error processing the request.
      */
@@ -329,7 +299,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
         if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG)
                 && listeningPoint != null)
             logger.logDebug(
-                    "PROCESSING INCOMING REQUEST " + sipRequest
+                    "PROCESSING INCOMING REQUEST\n" + sipRequest
                             + " transactionChannel = " + transactionChannel
                             + " listening point = "
                             + listeningPoint.getIPAddress() + ":"
@@ -489,7 +459,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
             SIPTransaction lastTransaction = ((SIPDialog) dialog)
                     .getLastTransaction();
             if (lastTransaction != null
-                    && sipProvider.isDialogErrorsAutomaticallyHandled()) {               
+                    && sipProvider.isDialogErrorsAutomaticallyHandled()) {
                 final String lastTransactionMethod = lastTransaction.getMethod();
                 if (lastTransaction instanceof SIPServerTransaction) {
                     // Handle Pseudo State Trying on Server Transaction
@@ -592,7 +562,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
 
                             }
                             SIPServerTransaction st = sipStack
-                                    .getRetransmissionAlertTransaction(dialogId);                           
+                                    .getRetransmissionAlertTransaction(dialogId);
                             if (st != null && st.isRetransmissionAlertEnabled()) {
                             	st.disableRetransmissionAlerts();
 
@@ -800,7 +770,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
                                     "dropping request -- automatic dialog "
                                             + "support enabled and dialog does not exist!");
                 this.sendCallOrTransactionDoesNotExistResponse(sipRequest, transaction);
-                
+
                 // If the stack knows about the tx, then remove it.
                 if (transaction != null) {
                     sipStack.removeTransaction(transaction);
@@ -979,11 +949,11 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
                     && lastTransaction != null
                     && lastTransaction.isInviteTransaction()
                     && lastTransaction instanceof ClientTransaction
-                    && lastTransaction.getState() != TransactionState.COMPLETED 
+                    && lastTransaction.getState() != TransactionState.COMPLETED
                     && lastTransaction.getState() != TransactionState.TERMINATED)
                      {
                 if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG)) {
-                	logger.logDebug("DialogFilter::processRequest:lastTransaction.getState(): " + lastTransaction.getState() +       
+                	logger.logDebug("DialogFilter::processRequest:lastTransaction.getState(): " + lastTransaction.getState() +
                                     " Sending 491 response for clientTx.");
                 }
                 this.sendRequestPendingResponse(sipRequest, transaction);
@@ -1279,7 +1249,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
                     sipEvent = new RequestEventExt((SipProvider) sipProvider,
                             (ServerTransaction) transaction,
                             subscriptionDialog, (Request) sipRequest);
-                    
+
                 } else {
                     /*
                      * Shadow transaction has been created but the stack does
@@ -1287,7 +1257,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
                      */
                     sipEvent = new RequestEventExt((SipProvider) sipProvider,
                             null, subscriptionDialog, (Request) sipRequest);
-                  
+
                 }
 
             } else {
@@ -1315,9 +1285,9 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
             } else {
                 sipEvent = new RequestEventExt(sipProvider, null, dialog,
                         (Request) sipRequest);
-               
+
             }
-           
+
         }
         ((RequestEventExt) sipEvent).setRemoteIpAddress(sipRequest.getRemoteAddress().getHostAddress());
         ((RequestEventExt)sipEvent).setRemotePort(sipRequest.getRemotePort());
@@ -1327,7 +1297,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
 
     /**
      * Process the response.
-     * 
+     *
      * @exception SIPServerException
      *                is thrown when there is an error processing the response
      * @param incomingMessageChannel
@@ -1337,7 +1307,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
             MessageChannel incomingMessageChannel, SIPDialog dialog) {
         if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG)) {
             logger.logDebug(
-                    "PROCESSING INCOMING RESPONSE"
+                    "PROCESSING INCOMING RESPONSE\n"
                             + response.encodeMessage(new StringBuilder()));
         }
         if (listeningPoint == null) {
@@ -1444,7 +1414,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
 
             ResponseEventExt sipEvent = new ResponseEventExt(sipProvider,
                     transaction, dialog, (Response) response);
-                
+
             if (sipStack.getMaxForkTime() != 0
                     && SIPTransactionStack.isDialogCreated(response.getCSeqHeader().getMethod())) {
                 SIPClientTransaction forked = this.sipStack
@@ -1462,7 +1432,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
                 }
             }
             sipEvent.setRetransmission(response.isRetransmission());
-            
+
             sipEvent.setRemoteIpAddress(response.getRemoteAddress().getHostAddress());
             sipEvent.setRemotePort(response.getRemotePort());
             sipProvider.handleEvent(sipEvent, transaction);
@@ -1475,7 +1445,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
         if (sipStack.getMaxForkTime() != 0
                 && SIPTransactionStack.isDialogCreated(response.getCSeqHeader().getMethod())) {
             SIPClientTransaction forked = this.sipStack
-                    .getForkedTransaction(response.getForkId());            
+                    .getForkedTransaction(response.getForkId());
             if(dialog != null && forked != null) {
                 dialog.checkRetransmissionForForking(response);
                 if(forked.getDefaultDialog() != null && !dialog.equals(forked.getDefaultDialog())) {
@@ -1505,7 +1475,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
      * Just a placeholder. This is called from the stack for message logging.
      * Auxiliary processing information can be passed back to be written into
      * the log file.
-     * 
+     *
      * @return auxiliary information that we may have generated during the
      *         message processing which is retrieved by the message logger.
      */
@@ -1515,7 +1485,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
 
     /*
      * (non-Javadoc)
-     * 
+     *
      * @see
      * gov.nist.javax.sip.stack.ServerResponseInterface#processResponse(gov.
      * nist.javax.sip.message.SIPResponse,
@@ -1611,7 +1581,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
                 && sipResponse.getTo().getTag() != null && sipDialog == null) {
             // Issue 317 : for forked response even if automatic dialog support is not enabled
             // a dialog should be created in the case where the original Tx already have a default dialog
-            // and the current dialog is null. This is also avoiding creating dialog automatically if the flag is not set            
+            // and the current dialog is null. This is also avoiding creating dialog automatically if the flag is not set
             if (sipProvider.isAutomaticDialogSupportEnabled()) {
                  createDialog = true;
             }
@@ -1624,7 +1594,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
                                 "Need to create dialog for response = " + sipResponse);
                     createDialog = true;
                 }
-            } 
+            }
             if (createDialog) {
                 if (this.transactionChannel != null) {
                     if (sipDialog == null) {
@@ -1719,12 +1689,12 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
         }
         if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG))
             logger.logDebug(
-                    "sending response " + sipResponse.toString() + " to TU for processing ");        
+                    "sending response " + sipResponse.toString() + " to TU for processing ");
 
         ResponseEventExt responseEvent = new ResponseEventExt(sipProvider,
                 (ClientTransactionExt) transaction, sipDialog,
                 (Response) sipResponse);
-        
+
         responseEvent.setRemoteIpAddress(sipResponse.getRemoteAddress().getHostAddress());
         responseEvent.setRemotePort(sipResponse.getRemotePort());
 
@@ -1744,7 +1714,7 @@ class DialogFilter implements ServerRequestInterface, ServerResponseInterface {
                 }
             }
         }
-        
+
         if(sipDialog != null && sipResponse.getStatusCode() != 100 && sipResponse.getTo().getTag() != null) {
             sipDialog.setLastResponse(transaction, sipResponse);
         }

@@ -1,13 +1,13 @@
 /*
- * Conditions Of Use 
- * 
+ * Conditions Of Use
+ *
  * This software was developed by employees of the National Institute of
  * Standards and Technology (NIST), an agency of the Federal Government.
  * Pursuant to title 15 Untied States Code Section 105, works of NIST
  * employees are not subject to copyright protection in the United States
  * and are considered to be in the public domain.  As a result, a formal
  * license is not needed to use the software.
- * 
+ *
  * This software is provided by NIST as a service and is expressly
  * provided "AS IS."  NIST MAKES NO WARRANTY OF ANY KIND, EXPRESS, IMPLIED
  * OR STATUTORY, INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTY OF
@@ -16,61 +16,32 @@
  * regarding the use of the software or the results thereof, including but
  * not limited to the correctness, accuracy, reliability or usefulness of
  * the software.
- * 
+ *
  * Permission to use this software is contingent upon your acceptance
  * of the terms of this agreement
- *  
+ *
  * .
- * 
+ *
  */
 package gov.nist.javax.sip.stack;
 
-import gov.nist.core.CommonLogger;
-import gov.nist.core.InternalErrorHandler;
-import gov.nist.core.LogWriter;
-import gov.nist.core.NameValueList;
-import gov.nist.core.StackLogger;
-import gov.nist.javax.sip.SIPConstants;
-import gov.nist.javax.sip.SipProviderImpl;
-import gov.nist.javax.sip.SipStackImpl;
-import gov.nist.javax.sip.Utils;
-import gov.nist.javax.sip.address.AddressImpl;
-import gov.nist.javax.sip.header.Contact;
-import gov.nist.javax.sip.header.Event;
-import gov.nist.javax.sip.header.Expires;
-import gov.nist.javax.sip.header.RecordRoute;
-import gov.nist.javax.sip.header.RecordRouteList;
-import gov.nist.javax.sip.header.Route;
-import gov.nist.javax.sip.header.RouteList;
-import gov.nist.javax.sip.header.TimeStamp;
-import gov.nist.javax.sip.header.To;
-import gov.nist.javax.sip.header.Via;
-import gov.nist.javax.sip.message.SIPMessage;
-import gov.nist.javax.sip.message.SIPRequest;
-import gov.nist.javax.sip.message.SIPResponse;
+import gov.nist.core.*;
+import gov.nist.javax.sip.*;
+import gov.nist.javax.sip.address.*;
+import gov.nist.javax.sip.header.*;
+import gov.nist.javax.sip.message.*;
 import gov.nist.javax.sip.stack.IllegalTransactionStateException.Reason;
 
-import java.io.IOException;
-import java.text.ParseException;
-import java.util.ListIterator;
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.io.*;
+import java.text.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
 
-import javax.sip.Dialog;
-import javax.sip.DialogState;
-import javax.sip.InvalidArgumentException;
-import javax.sip.SipException;
-import javax.sip.Timeout;
-import javax.sip.TimeoutEvent;
-import javax.sip.TransactionState;
-import javax.sip.address.Hop;
-import javax.sip.address.SipURI;
-import javax.sip.header.EventHeader;
-import javax.sip.header.ExpiresHeader;
-import javax.sip.header.RouteHeader;
-import javax.sip.header.TimeStampHeader;
-import javax.sip.message.Request;
+import javax.sip.*;
+import javax.sip.address.*;
+import javax.sip.header.*;
+import javax.sip.message.*;
 
 /*
  * Jeff Keyser -- initial. Daniel J. Martinez Manzano --Added support for TLS message channel.
@@ -80,14 +51,14 @@ import javax.sip.message.Request;
 
 /**
  * Represents a client transaction. Implements the following state machines. (From RFC 3261)
- * 
+ *
  * <pre>
- * 
- * 
- * 
- * 
- * 
- * 
+ *
+ *
+ *
+ *
+ *
+ *
  *                                                     |INVITE from TU
  *                                   Timer A fires     |INVITE sent
  *                                   Reset A,          V                      Timer B fires
@@ -126,10 +97,10 @@ import javax.sip.message.Request;
  *                                               | Terminated|&lt;--------------+
  *                                               |           |
  *                                               +-----------+
- *                      
+ *
  *                                       Figure 5: INVITE client transaction
- *                      
- *                      
+ *
+ *
  *                                                         |Request from TU
  *                                                         |send request
  *                                     Timer E             V
@@ -170,19 +141,19 @@ import javax.sip.message.Request;
  *                               the event           +-----------+
  *                               over the action
  *                               to take
- *                      
+ *
  *                                       Figure 6: non-INVITE client transaction
- * 
- * 
- * 
- * 
- * 
- * 
+ *
+ *
+ *
+ *
+ *
+ *
  * </pre>
- * 
- * 
+ *
+ *
  * @author M. Ranganathan
- * 
+ *
  * @version 1.2 $Revision: 1.144 $ $Date: 2010-12-02 22:04:16 $
  */
 public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPClientTransaction {
@@ -288,7 +259,7 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
 
   /**
    * Creates a new client transaction.
-   * 
+   *
    * @param newSIPStack Transaction stack this transaction belongs to.
    * @param newChannelToUse Channel to encapsulate.
    * @return the created client transaction.
@@ -410,7 +381,7 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
       }
 
       if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
-        logger.logDebug("Sending Message " + messageToSend);
+        logger.logDebug("Sending Message\n" + messageToSend);
         logger.logDebug("TransactionState " + this.getState());
       }
       // If this is the first request for this transaction,
@@ -520,7 +491,7 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
 
     /*
      * JvB: this is now duplicate with code in the other processResponse
-     * 
+     *
      * if (dialog != null && transactionResponse.getStatusCode() != 100 &&
      * (transactionResponse.getTo().getTag() != null || sipStack .isRfc2543Supported())) { //
      * add the route before you process the response. dialog.setLastResponse(this,
@@ -542,13 +513,13 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
 
   /**
    * Implements the state machine for invite client transactions.
-   * 
+   *
    * <pre>
-   * 
-   * 
-   * 
-   * 
-   * 
+   *
+   *
+   *
+   *
+   *
    *                                                         |Request from TU
    *                                                         |send request
    *                                     Timer E             V
@@ -589,14 +560,14 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
    *                               the event           +-----------+
    *                               over the action
    *                               to take
-   *                      
+   *
    *                                       Figure 6: non-INVITE client transaction
-   * 
-   * 
-   * 
-   * 
+   *
+   *
+   *
+   *
    * </pre>
-   * 
+   *
    * @param transactionResponse -- transaction response received.
    * @param sourceChannel - source channel on which the response was received.
    */
@@ -704,13 +675,13 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
 
   /**
    * Implements the state machine for invite client transactions.
-   * 
+   *
    * <pre>
-   * 
-   * 
-   * 
-   * 
-   * 
+   *
+   *
+   *
+   *
+   *
    *                                                     |INVITE from TU
    *                                   Timer A fires     |INVITE sent
    *                                   Reset A,          V                      Timer B fires
@@ -749,12 +720,12 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
    *                                               | Terminated|&lt;--------------+
    *                                               |           |
    *                                               +-----------+
-   * 
-   * 
-   * 
-   * 
+   *
+   *
+   *
+   *
    * </pre>
-   * 
+   *
    * @param transactionResponse -- transaction response received.
    * @param sourceChannel - source channel on which the response was received.
    */
@@ -948,7 +919,7 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see javax.sip.ClientTransaction#sendRequest()
    */
   /**
@@ -960,10 +931,6 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
 
     if (this.getInternalState() >= 0)
       throw new IllegalTransactionStateException("Request already sent", Reason.RequestAlreadySent);
-
-    if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
-      logger.logDebug("sendRequest() " + sipRequest);
-    }
 
     try {
       sipRequest.checkHeaders();
@@ -1182,7 +1149,7 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see javax.sip.ClientTransaction#createCancel()
    */
   /**
@@ -1207,7 +1174,7 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see javax.sip.ClientTransaction#createAck()
    */
   /**
@@ -1296,7 +1263,7 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
 
   /*
    * Creates an ACK for an error response, according to RFC3261 section 17.1.1.3
-   * 
+   *
    * Note that this is different from an ACK for 2xx
    */
   private final Request createErrorAck() throws SipException, ParseException {
@@ -1419,7 +1386,7 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
   /*
    * Terminate a transaction. This marks the tx as terminated The tx scanner will run and remove
    * the tx. (non-Javadoc)
-   * 
+   *
    * @see javax.sip.Transaction#terminate()
    */
   /**
@@ -1480,7 +1447,7 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see
    * gov.nist.javax.sip.stack.ServerResponseInterface#processResponse(gov.nist.javax.sip.message
    * .SIPResponse,
@@ -1605,7 +1572,7 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see gov.nist.javax.sip.stack.SIPTransaction#getDialog()
    */
   /**
@@ -1639,7 +1606,7 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see gov.nist.javax.sip.stack.SIPTransaction#setDialog(gov.nist.javax.sip.stack.SIPDialog,
    * gov.nist.javax.sip.message.SIPMessage)
    */
@@ -1661,7 +1628,7 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see gov.nist.javax.sip.stack.SIPTransaction#setDialog(gov.nist.javax.sip.stack.SIPDialog,
    * gov.nist.javax.sip.message.SIPMessage)
    */

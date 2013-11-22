@@ -1,15 +1,13 @@
 package gov.nist.javax.sip.clientauthutils;
 
-import gov.nist.core.LogWriter;
-import gov.nist.core.StackLogger;
+import gov.nist.core.*;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.security.*;
 
 /**
  * The class takes standard Http Authentication details and returns a response according to the
  * MD5 algorithm
- * 
+ *
  * @author Emil Ivov
  */
 
@@ -17,7 +15,7 @@ public class MessageDigestAlgorithm {
     /**
      * Calculates an http authentication response in accordance with rfc2617.
      * <p>
-     * 
+     *
      * @param algorithm a string indicating a pair of algorithms (MD5 (default), or MD5-sess) used
      *        to produce the digest and a checksum.
      * @param hashUserNameRealmPasswd MD5 hash of (username:realm:password)
@@ -35,7 +33,7 @@ public class MessageDigestAlgorithm {
      * @return a digest response as defined in rfc2617
      * @throws NullPointerException in case of incorrectly null parameters.
      */
-    
+
     static String calculateResponse(String algorithm, String hashUserNameRealmPasswd,
             String nonce_value, String nc_value, String cnonce_value,
             String method, String digest_uri_value, String entity_body, String qop_value,
@@ -44,9 +42,9 @@ public class MessageDigestAlgorithm {
             stackLogger.logDebug("trying to authenticate using : " + algorithm + ", "+
                     hashUserNameRealmPasswd + ", " + nonce_value + ", "
                     + nc_value + ", " + cnonce_value + ", " + method + ", " + digest_uri_value
-                    + ", " + entity_body + ", " + qop_value);
+                    + ", " + qop_value);
         }
-        
+
         if (hashUserNameRealmPasswd == null || method == null
                 || digest_uri_value == null || nonce_value == null)
             throw new NullPointerException(
@@ -54,12 +52,12 @@ public class MessageDigestAlgorithm {
 
         // The following follows closely the algorithm for generating a response
         // digest as specified by rfc2617
-        
+
         if (cnonce_value == null || cnonce_value.length() == 0)
                 throw new NullPointerException(
                         "cnonce_value may not be absent for MD5-Sess algorithm.");
 
-     
+
         String A2 = null;
         if (qop_value == null || qop_value.trim().length() == 0
                 || qop_value.trim().equalsIgnoreCase("auth")) {
@@ -84,14 +82,14 @@ public class MessageDigestAlgorithm {
         }
 
         return request_digest;
-        
-        
+
+
     }
 
     /**
      * Calculates an http authentication response in accordance with rfc2617.
      * <p>
-     * 
+     *
      * @param algorithm a string indicating a pair of algorithms (MD5 (default), or MD5-sess) used
      *        to produce the digest and a checksum.
      * @param username_value username_value (see rfc2617)
@@ -173,7 +171,7 @@ public class MessageDigestAlgorithm {
 
     /**
      * Defined in rfc 2617 as H(data) = MD5(data);
-     * 
+     *
      * @param data data
      * @return MD5(data)
      */
@@ -190,7 +188,7 @@ public class MessageDigestAlgorithm {
 
     /**
      * Defined in rfc 2617 as KD(secret, data) = H(concat(secret, ":", data))
-     * 
+     *
      * @param data data
      * @param secret secret
      * @return H(concat(secret, ":", data));
@@ -210,7 +208,7 @@ public class MessageDigestAlgorithm {
 
     /**
      * Converts b[] to hex string.
-     * 
+     *
      * @param b the bte array to convert
      * @return a Hex representation of b.
      */
