@@ -32,6 +32,11 @@
  *******************************************************************************/
 package gov.nist.javax.sip.address;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 /**
  * User information part of a URL.
  *
@@ -41,6 +46,7 @@ package gov.nist.javax.sip.address;
  */
 public final class UserInfo extends NetObject {
 
+    private static final Logger sLogger = Logger.getLogger(UserInfo.class.getName());
 
     private static final long serialVersionUID = 7268593273924256144L;
 
@@ -107,10 +113,24 @@ public final class UserInfo extends NetObject {
     }
 
     public StringBuilder encode(StringBuilder buffer) {
+
+        String encodedUser = user;
+
+        try
+        {
+            // Reverse the parsing done in URLParser.user
+            encodedUser = URLEncoder.encode(user, "UTF-8").replace("%2B", "+");
+        }
+        catch(UnsupportedEncodingException e)
+        {
+            // This should never happen.
+            sLogger.log(Level.SEVERE, "Failed to encode: " + user, e);
+        }
+
         if (password != null)
-            buffer.append(user).append(COLON).append(password);
+            buffer.append(encodedUser).append(COLON).append(password);
         else
-            buffer.append(user);
+            buffer.append(encodedUser);
 
         return buffer;
     }
