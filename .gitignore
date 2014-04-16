@@ -49,3 +49,4 @@ PutObjectStoreDirHere
 # Some other stuff created by builds
 TIMESTAMP
 version.txt
+javadoc
