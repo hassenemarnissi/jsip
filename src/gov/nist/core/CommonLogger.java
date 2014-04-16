@@ -135,4 +135,34 @@ public class CommonLogger implements StackLogger{
 		
 		legacyLogger.setStackProperties(stackProperties);
 	}
+
+    @Override
+    public void logFatalError(String message, Throwable cause)
+    {
+        logger().logFatalError(message, cause);
+    }
+
+    @Override
+    public void logError(String message, Throwable cause)
+    {
+        logger().logError(message, cause);
+    }
+
+    @Override
+    public void logWarning(String string, Throwable cause)
+    {
+        logger().logWarning(string, cause);
+    }
+
+    @Override
+    public void logInfo(String string, Throwable cause)
+    {
+        logger().logInfo(string, cause);
+    }
+
+    @Override
+    public void logWarning(Throwable cause)
+    {
+        logger().logWarning(cause);
+    }
 }

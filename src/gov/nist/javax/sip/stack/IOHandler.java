@@ -272,10 +272,11 @@ public class IOHandler {
         int length = bytes.length;
         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
             logger.logDebug(
-                    "sendBytes " + transport + " local inAddr "
-                    		+ senderAddress.getHostAddress() + " remote inAddr "
-                            + receiverAddress.getHostAddress() + " port = "
-                            + contactPort + " length = " + length + " isClient " + isClient );
+                    "sendBytes " + transport +
+                    " local addr " + senderAddress.getHostAddress() +
+                    " remote addr " + receiverAddress.getHostAddress() +
+                    " port = " + contactPort +
+                    " length = " + length + " isClient " + isClient );
 
         }
         if (logger.isLoggingEnabled(LogLevels.TRACE_INFO)
@@ -307,19 +308,26 @@ public class IOHandler {
                         // address (i.e. that of the stack). In version 1.2
                         // the IP address is on a per listening point basis.
                         try {
-                        	clientSock = sipStack.getNetworkLayer().createSocket(
-                        			receiverAddress, contactPort, senderAddress);
-                        } catch (SocketException e) { // We must catch the socket timeout exceptions here, any SocketException not just ConnectException
-                        	logger.logError("Problem connecting " +
-                        			receiverAddress + " " + contactPort + " " + senderAddress + " for message " + new String(bytes, "UTF-8"));
-                        	// new connection is bad.
-                        	// remove from our table the socket and its semaphore
-                        	removeSocket(key);
-                        	throw new SocketException(e.getClass() + " " + e.getMessage() + " " + e.getCause() + " Problem connecting " +
-                        			receiverAddress + " " + contactPort + " " + senderAddress + " for message " + new String(bytes, "UTF-8"));
+                            clientSock = sipStack.getNetworkLayer().createSocket(
+                                    receiverAddress, contactPort, senderAddress);
+                        } catch (SocketException e) {
+                            // We must catch the socket timeout exceptions here,
+                            // any SocketException not just ConnectException
+                            // new connection is bad.
+                            // remove from our table the socket and its semaphore
+                            String log =" Problem connecting to " + receiverAddress + " " + contactPort +
+                                    " from " + senderAddress +
+                                    " for message " + new String(bytes, "UTF-8");
+                            logger.logError(log, e);
+
+                            removeSocket(key);
+
+                            SocketException ex = new SocketException(log);
+                            ex.initCause(e);
+                            throw ex;
                         }
                         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
-                        	logger.logDebug("local inaddr = " + clientSock.getLocalAddress().getHostAddress());
+                            logger.logDebug("local inaddr = " + clientSock.getLocalAddress().getHostAddress());
                         }
                         OutputStream outputStream = clientSock
                                 .getOutputStream();
@@ -337,26 +345,27 @@ public class IOHandler {
                                     .isLoggingEnabled(LogWriter.TRACE_WARN))
                                 logger.logWarning(
                                         "IOException occured retryCount "
-                                                + retry_count);                            
+                                                + retry_count, ex);
                             try {
                                 clientSock.close();
                             } catch (Exception e) {
+                                logger.logWarning(e);
                             }
                             clientSock = null;
                             retry_count++;
                             // This is a server tx trying to send a response.
                             if ( !isClient ) {
-   								removeSocket(key);
+                                removeSocket(key);
                                 throw ex;
                             }
                             if(retry_count >= max_retry) {
-								// old connection is bad.
-								// remove from our table the socket and its semaphore
-								removeSocket(key);
-							} else {
-								// don't remove the semaphore on retry
-								socketTable.remove(key);
-							}
+                                // old connection is bad.
+                                // remove from our table the socket and its semaphore
+                                removeSocket(key);
+                            } else {
+                                // don't remove the semaphore on retry
+                                socketTable.remove(key);
+                            }
                         }
                     }
                 }
@@ -369,8 +378,8 @@ public class IOHandler {
                                     + " port = " + contactPort +
                             " remoteHost " + messageChannel.getPeerAddress() +
                             " remotePort " + messageChannel.getPeerPort() +
-                            " peerPacketPort "
-                                    + messageChannel.getPeerPacketSourcePort() + " isClient " + isClient);
+                            " peerPacketPort " + messageChannel.getPeerPacketSourcePort() +
+                            " isClient " + isClient, ex);
                 }
                 removeSocket(key);                                
             } finally {
@@ -471,6 +480,7 @@ public class IOHandler {
                                         "Closing socket");
                                 clientSock.close();
                             } catch (Exception e) {
+                                logger.logWarning(e);
                             }
                             clientSock = null;
                             retry_count++;
@@ -482,15 +492,18 @@ public class IOHandler {
                 throw ex;
             } catch (IOException ex) {
                 removeSocket(key);
+                logger.logWarning(ex);
             } finally {
                 leaveIOCriticalSection(key);
             }
             if (clientSock == null) {
                 throw new IOException("Could not connect to " + receiverAddress
                         + ":" + contactPort);
-            } else
+            }
+            else
+            {
                 return clientSock;
-
+            }
         } else {
             // This is a UDP transport...
             DatagramSocket datagramSock = sipStack.getNetworkLayer()

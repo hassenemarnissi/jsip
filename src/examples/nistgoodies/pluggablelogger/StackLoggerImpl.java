@@ -13,14 +13,13 @@ import org.apache.log4j.Logger;
 import org.apache.log4j.SimpleLayout;
 
 public class StackLoggerImpl implements StackLogger {
-    
+
     private static Logger logger = Logger.getLogger(StackLoggerImpl.class) ;
-    
-    
+
     private static HashMap<String,Integer> levelMap = new HashMap<String,Integer>();
-    
+
     private static HashMap<Integer,String> inverseLevelMap = new HashMap<Integer,String>();
-    
+
     boolean enabled = true;
  
     private static void putMap(String level, int jsipLevel) {
@@ -37,13 +36,11 @@ public class StackLoggerImpl implements StackLogger {
         putMap(Level.OFF.toString(), new Integer(TRACE_NONE));
         logger.addAppender(new ConsoleAppender(new SimpleLayout()));
     }
-    
-    
+
     public StackLoggerImpl( ) {
         logger.setLevel(Level.DEBUG);
         logger.addAppender(new ConsoleAppender());
     }
-    
  
     public static void setLogger(Logger logger) {
         StackLoggerImpl.logger = logger;
@@ -116,11 +113,11 @@ public class StackLoggerImpl implements StackLogger {
         
     }
 
-    public void logStackTrace(int level) {
+    public void logStackTrace(int level)
+    {
         if ( this.isLoggingEnabled(level)) {
             logStackTrace();
         }
-
     }
 
     public void logWarning(String message) {
@@ -144,4 +141,37 @@ public class StackLoggerImpl implements StackLogger {
     }
 
 
+    @Override
+    public void logFatalError(String message, Throwable cause)
+    {
+        logger.fatal(message, cause);
+    }
+
+
+    @Override
+    public void logError(String message, Throwable cause)
+    {
+        logger.error(message, cause);
+    }
+
+
+    @Override
+    public void logWarning(Throwable cause)
+    {
+        logger.warn("", cause);
+    }
+
+
+    @Override
+    public void logWarning(String string, Throwable cause)
+    {
+        logger.warn(string, cause);
+    }
+
+
+    @Override
+    public void logInfo(String string, Throwable cause)
+    {
+        logger.info(string, cause);
+    }
 }

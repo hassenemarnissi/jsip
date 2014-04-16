@@ -262,7 +262,6 @@ public class LogWriter implements StackLogger {
         String newMsg = this.enhanceMessage(message);
         countLines(newMsg);
         logger.fatal(newMsg);
-
     }
 
     /**
@@ -413,17 +412,15 @@ public class LogWriter implements StackLogger {
         return this.needsLogging && logLevel <= traceLevel;
     }
 
-
     /**
      * Log an error message.
      *
      * @param message
      * @param ex
      */
-    public void logError(String message, Exception ex) {
-        Logger logger = this.getLogger();
-        logger.error(message, ex);
-
+    public void logError(String message, Exception ex)
+    {
+        getLogger().error(message, ex);
     }
 
     /**
@@ -431,9 +428,9 @@ public class LogWriter implements StackLogger {
      *
      * @param string
      */
-    public void logWarning(String string) {
+    public void logWarning(String string)
+    {
         getLogger().warn(string);
-
     }
 
     /**
@@ -501,6 +498,36 @@ public class LogWriter implements StackLogger {
 	        return null;
 	    }
 	}
+
+    @Override
+    public void logFatalError(String message, Throwable cause)
+    {
+        getLogger().fatal(message, cause);
+    }
+
+    @Override
+    public void logError(String message, Throwable cause)
+    {
+        getLogger().error(message, cause);
+    }
+
+    @Override
+    public void logWarning(Throwable cause)
+    {
+        getLogger().warn("", cause);
+    }
+
+    @Override
+    public void logWarning(String message, Throwable cause)
+    {
+        getLogger().warn(message, cause);
+    }
+
+    @Override
+    public void logInfo(String message, Throwable cause)
+    {
+        getLogger().info(message, cause);
+    }
 
   
 }

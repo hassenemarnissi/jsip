@@ -60,21 +60,22 @@ public class CommonLoggerLog4j implements StackLogger {
 
     }
 
-    public void logStackTrace(int traceLevel) {
-        
-            StringWriter sw = new StringWriter();
-            PrintWriter pw = new PrintWriter(sw);
-            StackTraceElement[] ste = new Exception().getStackTrace();
-            // Skip the log writer frame and log all the other stack frames.
-            for (int i = 1; i < ste.length; i++) {
-                String callFrame = "[" + ste[i].getFileName() + ":"
-                        + ste[i].getLineNumber() + "]";
-                pw.print(callFrame);
-            }
-            pw.close();
-            String stackTrace = sw.getBuffer().toString();
-            logger.debug(stackTrace);
+    public void logStackTrace(int traceLevel)
+    {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        StackTraceElement[] ste = new Exception().getStackTrace();
 
+        // Skip the log writer frame and log all the other stack frames.
+        for (int i = 1; i < ste.length; i++) {
+            String callFrame = "[" + ste[i].getFileName() + ":"
+                    + ste[i].getLineNumber() + "]";
+            pw.print(callFrame);
+        }
+
+        pw.close();
+        String stackTrace = sw.getBuffer().toString();
+        logger.debug(stackTrace);
     }
 
     /**
@@ -114,9 +115,9 @@ public class CommonLoggerLog4j implements StackLogger {
      *
      * @param ex
      */
-    public void logException(Throwable ex) {
-
-        logger.error("Error", ex);
+    public void logException(Throwable ex)
+    {
+        getLogger().error("Error", ex);
     }
 
     /**
@@ -125,9 +126,9 @@ public class CommonLoggerLog4j implements StackLogger {
      * @param message
      *            message to log into the log file.
      */
-    public void logDebug(String message) {
-        logger.debug(message);
-
+    public void logDebug(String message)
+    {
+        getLogger().debug(message);
     }
     
     /**
@@ -136,8 +137,9 @@ public class CommonLoggerLog4j implements StackLogger {
      * @param message
      *            message to log into the log file.
      */
-    public void logTrace(String message) {
-    	logger.debug(message);
+    public void logTrace(String message)
+    {
+        getLogger().debug(message);
     }
 
     /**
@@ -160,9 +162,9 @@ public class CommonLoggerLog4j implements StackLogger {
      * @param message --
      *            error message to log.
      */
-    public void logFatalError(String message) {
-        logger.fatal(message);
-
+    public void logFatalError(String message)
+    {
+        getLogger().fatal(message);
     }
 
     /**
@@ -172,27 +174,27 @@ public class CommonLoggerLog4j implements StackLogger {
      *            error message to log.
      *
      */
-    public void logError(String message) {
-        logger.error(message);
-
+    public void logError(String message)
+    {
+        getLogger().error(message);
     }
 
-    public CommonLoggerLog4j(Logger logger) {
+    public CommonLoggerLog4j(Logger logger)
+    {
     	this.logger = logger;
     }
-    
-	public void setStackProperties(Properties configurationProperties) {
 
+    public void setStackProperties(Properties configurationProperties)
+    {
         // Do nothing (can't do anything here, this method is called only for legacy)
-        
     }
 
     /**
      * @return flag to indicate if logging is enabled.
      */
-    public boolean isLoggingEnabled() {
-
-        return logger.isInfoEnabled();
+    public boolean isLoggingEnabled()
+    {
+        return getLogger().isInfoEnabled();
     }
 
     /**
@@ -201,7 +203,7 @@ public class CommonLoggerLog4j implements StackLogger {
      * @param logLevel
      */
     public boolean isLoggingEnabled(int logLevel) {
-        return logger.isEnabledFor(intToLevel(logLevel));
+        return getLogger().isEnabledFor(intToLevel(logLevel));
     }
 
 
@@ -211,10 +213,9 @@ public class CommonLoggerLog4j implements StackLogger {
      * @param message
      * @param ex
      */
-    public void logError(String message, Exception ex) {
-        Logger logger = this.getLogger();
-        logger.error(message, ex);
-
+    public void logError(String message, Exception ex)
+    {
+        getLogger().error(message, ex);
     }
 
     /**
@@ -224,7 +225,6 @@ public class CommonLoggerLog4j implements StackLogger {
      */
     public void logWarning(String string) {
         getLogger().warn(string);
-
     }
 
     /**
@@ -291,8 +291,33 @@ public class CommonLoggerLog4j implements StackLogger {
 	}
 
 	public void setBuildTimeStamp(String buildTimeStamp) {
-		logger.info("Build timestamp: " + buildTimeStamp);
+	    getLogger().info("Build timestamp: " + buildTimeStamp);
 	}
+
+    @Override
+    public void logFatalError(String message, Throwable cause) {
+        getLogger().fatal(message, cause);
+    }
+
+    @Override
+    public void logError(String message, Throwable cause) {
+        getLogger().error(message, cause);
+    }
+
+    @Override
+    public void logWarning(Throwable cause) {
+        getLogger().warn("", cause);
+    }
+
+    @Override
+    public void logWarning(String string, Throwable cause) {
+        getLogger().warn(string, cause);
+    }
+
+    @Override
+    public void logInfo(String string, Throwable cause) {
+        getLogger().info(string, cause);
+    }
 
   
 }

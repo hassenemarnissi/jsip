@@ -62,38 +62,80 @@ public interface StackLogger extends LogLevels {
      *
      * @param message --
      *            error message to log.
+     * @param cause --
+     *            Throwable causing the error
+     */
+    public void logFatalError(String message, Throwable cause);
+
+    /**
+     * Log an error message.
+     *
+     * @param message --
+     *            error message to log.
      *
      */
     public void logError(String message);
+
+    /**
+     * Log an error message.
+     *
+     * @param message --
+     *            error message to log.
+     * @param cause --
+     *            Throwable causing the error
+     */
+    public void logError(String message, Throwable cause);
+
     /**
      * @return flag to indicate if logging is enabled.
      */
     public boolean isLoggingEnabled();
+
     /**
      * Return true/false if loging is enabled at a given level.
      *
      * @param logLevel
      */
     public boolean isLoggingEnabled(int logLevel);
+
     /**
-     * Log an error message.
-     *
-     * @param message
-     * @param ex
-     */
-    public void logError(String message, Exception ex);
-    /**
-     * Log a warning mesasge.
+     * Log a warning message.
      *
      * @param string
      */
     public void logWarning(String string);
+
+    /**
+     * Log a warning message.
+     *
+     * @param cause
+     */
+    public void logWarning(Throwable cause);
+
+    /**
+     * Log a warning message.
+     *
+     * @param string
+     * @param cause --
+     *            Throwable causing the error
+     */
+    public void logWarning(String string, Throwable cause);
+
     /**
      * Log an info message.
      *
      * @param string
      */
     public void logInfo(String string);
+
+    /**
+     * Log an info message.
+     *
+     * @param string
+     * @param cause --
+     *            Throwable causing the error
+     */
+    public void logInfo(String string, Throwable cause);
     
    
     /**
@@ -124,7 +166,4 @@ public interface StackLogger extends LogLevels {
      * @return
      */
     public String getLoggerName();
-    
-    
-   
 }
