@@ -68,30 +68,66 @@ public class StackLoggerImpl implements StackLogger {
        return sipLogLevel <= levelSet;
     }
 
-    public void logDebug(String string) {
-       logger.debug(string);
+    public void logTrace(String message) {
+        logger.trace(message);
+    }
 
+    public void logDebug(String string)
+    {
+       logger.debug(string);
+    }
+
+    public void logInfo(String string) { 
+        logger.info(string);
+    }
+
+    @Override
+    public void logInfo(String string, Throwable cause)
+    {
+        logger.info(string, cause);
+    }
+
+    public void logWarning(String message)
+    {
+        logger.warn(message);
+    }
+
+    @Override
+    public void logWarning(Throwable cause)
+    {
+        logger.warn("Exception: ", cause);
+    }
+
+    @Override
+    public void logWarning(String string, Throwable cause)
+    {
+        logger.warn(string, cause);
     }
 
     public void logError(String string) {
         logger.error(string);
     }
 
-    public void logError(String string, Exception exception) {
-      logger.error(string,exception);
-
+    @Override
+    public void logError(String message, Throwable cause)
+    {
+        logger.error(message, cause);
     }
 
-    public void logException(Throwable throwable) {
+    public void logException(Throwable throwable)
+    {
         logger.error("Exception occured",throwable);
     }
 
-    public void logFatalError(String string) {     
-        logger.fatal("Fatal error " + string);
+    @Override
+    public void logFatalError(String message, Throwable cause)
+    {
+        logger.fatal(message, cause);
     }
 
-    public void logInfo(String string) { 
-        logger.info(string);
+    public void logFatalError(String message)
+    {
+        logger.fatal(message);
     }
 
     public void logStackTrace() {
@@ -120,14 +156,6 @@ public class StackLoggerImpl implements StackLogger {
         }
     }
 
-    public void logWarning(String message) {
-        logger.warn(message);
-    }
-    
-    public void logTrace(String message) {
-        logger.trace(message);
-    }
-
     public void setBuildTimeStamp(String timeStamp) {
        logger.info("BuildTimeStamp = " + timeStamp);
     }
@@ -140,38 +168,4 @@ public class StackLoggerImpl implements StackLogger {
         return logger.getName();
     }
 
-
-    @Override
-    public void logFatalError(String message, Throwable cause)
-    {
-        logger.fatal(message, cause);
-    }
-
-
-    @Override
-    public void logError(String message, Throwable cause)
-    {
-        logger.error(message, cause);
-    }
-
-
-    @Override
-    public void logWarning(Throwable cause)
-    {
-        logger.warn("", cause);
-    }
-
-
-    @Override
-    public void logWarning(String string, Throwable cause)
-    {
-        logger.warn(string, cause);
-    }
-
-
-    @Override
-    public void logInfo(String string, Throwable cause)
-    {
-        logger.info(string, cause);
-    }
 }

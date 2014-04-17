@@ -310,25 +310,28 @@ public class IOHandler {
                         try {
                             clientSock = sipStack.getNetworkLayer().createSocket(
                                     receiverAddress, contactPort, senderAddress);
-                        } catch (SocketException e) {
-                            // We must catch the socket timeout exceptions here,
-                            // any SocketException not just ConnectException
-                            // new connection is bad.
-                            // remove from our table the socket and its semaphore
-                            String log =" Problem connecting to " + receiverAddress + " " + contactPort +
+                        }
+                        catch (SocketException e)
+                        {
+                            String log ="Problem connecting to " + receiverAddress + 
+                                    " " + contactPort +
                                     " from " + senderAddress +
                                     " for message " + new String(bytes, "UTF-8");
                             logger.logError(log, e);
 
+                            // Remove the socket from our table and its semaphore
                             removeSocket(key);
 
                             SocketException ex = new SocketException(log);
                             ex.initCause(e);
                             throw ex;
                         }
-                        if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
+
+                        if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
+                        {
                             logger.logDebug("local inaddr = " + clientSock.getLocalAddress().getHostAddress());
                         }
+
                         OutputStream outputStream = clientSock
                                 .getOutputStream();
                         writeChunks(outputStream, bytes, length);
