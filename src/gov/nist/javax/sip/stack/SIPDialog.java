@@ -600,7 +600,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
                 if (!SIPDialog.this.isBackToBackUserAgent) {
                     if (logger.isLoggingEnabled())
                         logger.logError(
-                                "ACK Was not sent. killing dialog " + dialogId);
+                                "ACK Was not sent. killing dialog " + this + ", with id " + dialogId);
                     if (((SipProviderImpl) sipProvider).getSipListener() instanceof SipListenerExt) {
                         raiseErrorEvent(SIPDialogErrorEvent.DIALOG_ACK_NOT_SENT_TIMEOUT);
                     } else {
@@ -662,6 +662,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
         eventListeners = new CopyOnWriteArraySet<SIPDialogEventListener>();
         this.earlyDialogTimeout = ((SIPTransactionStack) provider.getSipStack())
                 .getEarlyDialogTimeout();
+        logger.logDebug("Created new dialog " + this);
     }
 
     private void recordStackTrace() {
@@ -3910,7 +3911,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
 
         } else {
         	  if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
-        		  logger.logDebug("SIPDialog::handleAck: lastResponseCSeqNumber = " + lastInviteOkReceived + " ackTxCSeq " + ackTransaction.getCSeq());
+                  logger.logDebug("SIPDialog::handleAck: lastResponseCSeqNumber = " + lastResponseCSeqNumber + " ackTxCSeq " + ackTransaction.getCSeq());
         	  }
              if (lastResponseStatusCode != null
                     && lastResponseStatusCode.intValue() / 100 == 2
