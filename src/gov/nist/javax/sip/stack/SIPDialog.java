@@ -358,6 +358,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
             }
         }
 
+        @Override
         public void run() {
             try {
                 long timeToWait = 0;
@@ -454,6 +455,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
 
     class LingerTimer extends SIPStackTimerTask implements Serializable {
 
+        @Override
         public void runTask() {
             SIPDialog dialog = SIPDialog.this;
             sipStack.removeDialog(dialog);
@@ -481,6 +483,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
             this.nRetransmissions = 0;
          }
 
+        @Override
         public void runTask() {
             // If I ACK has not been seen on Dialog,
             // resend last response.
@@ -570,6 +573,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
 
     class DialogDeleteTask extends SIPStackTimerTask implements Serializable {
 
+        @Override
         public void runTask() {
             delete();
         }
@@ -589,6 +593,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
             this.seqno = seqno;
         }
 
+        @Override
         public void runTask() {
             if (SIPDialog.this.highestSequenceNumberAcknowledged < seqno) {
                 /*
@@ -1361,6 +1366,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
     /*
      * @see javax.sip.Dialog#setApplicationData()
      */
+    @Override
     public void setApplicationData(Object applicationData) {
         this.applicationData = applicationData;
     }
@@ -1370,6 +1376,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @see javax.sip.Dialog#getApplicationData()
      */
+    @Override
     public Object getApplicationData() {
         return this.applicationData;
     }
@@ -1559,6 +1566,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
         }
     }
 
+    @Override
     @Deprecated
     public Transaction getFirstTransaction() {
         throw new UnsupportedOperationException(
@@ -1601,6 +1609,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *         forwarding. Empty iterator is returned if route has not been
      *         established.
      */
+    @Override
     public Iterator getRouteSet() {
         if (this.routeList == null) {
             return new LinkedList().listIterator();
@@ -1668,6 +1677,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @return true if is server transaction created this dialog.
      */
+    @Override
     public boolean isServer() {
         if (this.firstTransactionSeen == false)
             return this.serverTransactionFlag;
@@ -1691,6 +1701,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      * @return the string identifier for this dialog.
      *
      */
+    @Override
     public String getDialogId() {
 
         if (this.dialogId == null && this.lastResponseDialogId != null)
@@ -1998,6 +2009,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      * to create a hole in the sequence number i.e. route a request outside the
      * dialog and then resume within the dialog.
      */
+    @Override
     public void incrementLocalSequenceNumber() {
         ++this.localSequenceNumber;
     }
@@ -2010,6 +2022,8 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      * @return local sequence number.
      */
 
+    @Deprecated
+    @Override
     public int getRemoteSequenceNumber() {
         return (int) this.remoteSequenceNumber;
     }
@@ -2022,6 +2036,8 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      * @return local sequence number.
      */
 
+    @Deprecated
+    @Override
     public int getLocalSequenceNumber() {
         return (int) this.localSequenceNumber;
     }
@@ -2041,6 +2057,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @see javax.sip.Dialog#getLocalSequenceNumberLong()
      */
+    @Override
     public long getLocalSeqNumber() {
         return this.localSequenceNumber;
     }
@@ -2050,6 +2067,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @see javax.sip.Dialog#getRemoteSequenceNumberLong()
      */
+    @Override
     public long getRemoteSeqNumber() {
         return this.remoteSequenceNumber;
     }
@@ -2059,6 +2077,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @see javax.sip.Dialog#getLocalTag()
      */
+    @Override
     public String getLocalTag() {
         return this.myTag;
     }
@@ -2068,6 +2087,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @see javax.sip.Dialog#getRemoteTag()
      */
+    @Override
     public String getRemoteTag() {
 
         return hisTag;
@@ -2098,6 +2118,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      * @see javax.sip.Dialog#delete()
      */
 
+    @Override
     public void delete() {
         // the reaper will get him later.
         this.setState(TERMINATED_STATE);
@@ -2108,6 +2129,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @see javax.sip.Dialog#getCallId()
      */
+    @Override
     public CallIdHeader getCallId() {
         // jeand : we save the header in a string form and reparse it, help GC
         // for dialogs updated not too often
@@ -2136,6 +2158,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      * @see javax.sip.Dialog#getLocalParty()
      */
 
+    @Override
     public javax.sip.address.Address getLocalParty() {
         // jeand : we save the address in a string form and reparse it, help GC
         // for dialogs updated not too often
@@ -2169,6 +2192,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @return the address object of the remote party.
      */
+    @Override
     public javax.sip.address.Address getRemoteParty() {
         // jeand : we save the address in a string form and reparse it, help GC
         // for dialogs updated not too often
@@ -2194,6 +2218,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @see javax.sip.Dialog#getRemoteTarget()
      */
+    @Override
     public javax.sip.address.Address getRemoteTarget() {
         // jeand : we save the address in a string form and reparse it, help GC
         // for dialogs updated not too often
@@ -2214,6 +2239,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @see javax.sip.Dialog#getState()
      */
+    @Override
     public DialogState getState() {
         if (this.dialogState == NULL_STATE)
             return null; // not yet initialized
@@ -2228,6 +2254,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      * @return <code>true</code> if this dialogue was established using a sips
      *         URI over TLS, and <code>false</code> otherwise.
      */
+    @Override
     public boolean isSecure() {
         return this.firstTransactionSecure;
     }
@@ -2237,6 +2264,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @see javax.sip.Dialog#sendAck(javax.sip.message.Request)
      */
+    @Override
     public void sendAck(Request request) throws SipException {
         this.sendAck(request, true);
     }
@@ -2246,6 +2274,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @see javax.sip.Dialog#createRequest(java.lang.String)
      */
+    @Override
     public Request createRequest(String method) throws SipException {
 
         if (method.equals(Request.ACK) || method.equals(Request.PRACK)) {
@@ -2497,6 +2526,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      * @see javax.sip.Dialog#sendRequest(javax.sip.ClientTransaction)
      */
 
+    @Override
     public void sendRequest(ClientTransaction clientTransactionId)
             throws TransactionDoesNotExistException, SipException {
         this.sendRequest(clientTransactionId, !this.isBackToBackUserAgent);
@@ -2857,6 +2887,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @see javax.sip.Dialog#createPrack(javax.sip.message.Response)
      */
+    @Override
     public Request createPrack(Response relResponse)
             throws DialogDoesNotExistException, SipException {
 
@@ -2934,6 +2965,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @see javax.sip.Dialog#createAck(long)
      */
+    @Override
     public Request createAck(long cseqno) throws InvalidArgumentException,
             SipException {
 
@@ -3120,6 +3152,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @return -- the SIP Provider associated with this transaction.
      */
+    @Override
     public SipProviderImpl getSipProvider() {
         return this.sipProvider;
     }
@@ -3616,6 +3649,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @see javax.sip.Dialog#createReliableProvisionalResponse(int)
      */
+    @Override
     public Response createReliableProvisionalResponse(int statusCode)
             throws InvalidArgumentException, SipException {
 
@@ -3762,6 +3796,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      * javax.sip.Dialog#sendReliableProvisionalResponse(javax.sip.message.Response
      * )
      */
+    @Override
     public void sendReliableProvisionalResponse(Response relResponse)
             throws SipException {
         if (!this.isServer()) {
@@ -3831,6 +3866,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @see javax.sip.Dialog#terminateOnBye(boolean)
      */
+    @Override
     public void terminateOnBye(boolean terminateFlag) throws SipException {
 
         this.terminateOnBye = terminateFlag;
@@ -3935,8 +3971,15 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
                  */
 
               	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
-                    logger.logDebug(
-                               " INVITE transaction not found");
+              	{
+              	    String detail = lastResponseStatusCode == null ?
+          	            "No lastResponseStatusCode" :
+          	            "Last code, method, cseq: " + lastResponseStatusCode +
+          	                            ", " + lastResponseMethod + ", " +
+          	                                             lastResponseCSeqNumber;
+                    logger.logDebug(" INVITE transaction not found. " + detail);
+              	}
+
               	if ( this.isBackToBackUserAgent() ) {
               		this.releaseAckSem();
               	}
@@ -4061,6 +4104,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @see gov.nist.javax.sip.DialogExt#setBackToBackUserAgent(boolean)
      */
+    @Override
     public void setBackToBackUserAgent() {
         this.isBackToBackUserAgent = true;
     }
@@ -4100,6 +4144,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
         return this.sequenceNumberValidation;
     }
 
+    @Override
     public void disableSequenceNumberValidation() {
         this.sequenceNumberValidation = false;
     }
@@ -4267,6 +4312,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @see gov.nist.javax.sip.DialogExt#isReleaseReferences()
      */
+    @Override
     public boolean isReleaseReferences() {
         return releaseReferences;
     }
@@ -4276,10 +4322,12 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      *
      * @see gov.nist.javax.sip.DialogExt#setReleaseReferences(boolean)
      */
+    @Override
     public void setReleaseReferences(boolean releaseReferences) {
         this.releaseReferences = releaseReferences;
     }
 
+    @Override
     public void setEarlyDialogTimeoutSeconds(int seconds) {
         if (seconds <= 0) {
             throw new IllegalArgumentException("Invalid value " + seconds);
