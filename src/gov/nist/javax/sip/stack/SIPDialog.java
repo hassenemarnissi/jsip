@@ -261,6 +261,24 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
 
   private AckSendingStrategy ackSendingStrategy = new AckSendingStrategyImpl();
 
+    /**
+     * tuple holding a method (of a transaction) and the response code, if any
+     * Stored in the cseq-keyed map of transactions.
+     */
+    private class MethodResponse {
+        public String method;
+        public int responseCode;
+        public MethodResponse(String xMethod, int xResponseCode) {
+            method = xMethod;
+            responseCode = xResponseCode;
+        }
+    }
+
+    /**
+     * All transactions seen by this dialog, keyed by cseq.  Enables us to track
+     * overlapping transactions.
+     */
+    private Map<Long, MethodResponse> transactions = new HashMap<Long, MethodResponse>();
 
     // //////////////////////////////////////////////////////
     // Inner classes
@@ -3250,6 +3268,9 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
                         .isServerTransaction());
             }
             this.setAssigned();
+
+            transactions.put(responseCSeqNumber, new MethodResponse(cseqMethod, statusCode));
+
             // Adjust state of the Dialog state machine.
             if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
                 logger.logDebug(
@@ -3954,14 +3975,16 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
                     && lastResponseMethod.equals(Request.INVITE)
                     && lastResponseCSeqNumber == ackTransaction.getCSeq()) {
 
-                ackTransaction.setDialog(this, lastResponseDialogId);
-                /*
-                 * record that we already saw an ACK for this dialog.
-                 */
-                ackReceived(ackTransaction.getCSeq());
-                if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
-                    logger.logDebug(
-                            "SIPDialog::handleACK: ACK for 2XX response --- sending to TU ");
+                acceptAckTransaction(ackTransaction);
+                return true;
+
+            } else if (transactions.containsKey(ackTransaction.getCSeq())) {
+                MethodResponse info = transactions.get(ackTransaction.getCSeq());
+                String method = info.method;
+                int statusCode = info.responseCode;
+                logger.logDebug("Have ACK for older transaction: " + method + ", " + statusCode);
+
+                acceptAckTransaction(ackTransaction);
                 return true;
 
             } else {
@@ -3987,6 +4010,15 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
 
             }
         }
+    }
+
+    private void acceptAckTransaction(SIPServerTransaction ackTransaction) {
+        ackTransaction.setDialog(this, lastResponseDialogId);
+        // record that we already saw an ACK for this dialog.
+        ackReceived(ackTransaction.getCSeq());
+        if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
+            logger.logDebug(
+                    "SIPDialog::handleACK: ACK for 2XX response --- sending to TU ");
     }
 
     String getEarlyDialogId() {
