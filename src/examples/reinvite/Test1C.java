@@ -10,7 +10,7 @@ import javax.sip.message.*;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.FileAppender;
 import org.apache.log4j.Logger;
-import org.apache.log4j.SimpleLayout;
+import org.apache.log4j.PatternLayout;
 
 import java.util.*;
 
@@ -24,13 +24,13 @@ import junit.framework.TestCase;
  * @author M. Ranganathan
  */
 
-public class Shootist  implements SipListener {
+public class Test1C implements SipListener {
 
     private boolean reInviteFlag;
 
     private SipProvider provider;
 
-    private int reInviteCount;
+    private int inviteCount = 0;
 
     private ContactHeader contactHeader;
 
@@ -47,7 +47,7 @@ public class Shootist  implements SipListener {
     // To run on two machines change these to suit.
     public static final String myAddress = "127.0.0.1";
 
-    public static final int myPort = 5060;
+    private static final int myPort = 5060;
 
     protected ClientTransaction inviteTid;
 
@@ -59,11 +59,11 @@ public class Shootist  implements SipListener {
             + "examples.shootist.Shootist \n"
             + ">>>> is your class path set to the root?";
 
-    private static Logger logger = Logger.getLogger(Shootist.class);
+    private static Logger logger = Logger.getLogger(Test1C.class);
 
     static {
         try {
-            logger.addAppender(new FileAppender(new SimpleLayout(),
+            logger.addAppender(new FileAppender(new PatternLayout("%d{HH:mm:ss.SSS} %-5p [%t]: %m%n"),
                     ProtocolObjects.logFileDirectory + "shootistconsolelog.txt"));
         } catch (Exception ex) {
             throw new RuntimeException("could not open shootistconsolelog.txt");
@@ -76,148 +76,19 @@ public class Shootist  implements SipListener {
 
     }
 
-    public Shootist(int count) {
+    public Test1C(int count) {
         this.counter = count;
     }
 
-    private void shutDownAndRestart() {
-        try {
+    public void processRequest(RequestEvent requestEvent) {
+       Request request = requestEvent.getRequest();
+       ServerTransaction serverTransactionId = requestEvent
+               .getServerTransaction();
 
-            logger.info("nulling reference");
-            ProtocolObjects.sipStack.deleteListeningPoint(listeningPoint);
-            checkState();
-            // This will close down the stack and exit all threads
-            provider.removeSipListener(this);
-            while (true) {
-                try {
-                    ProtocolObjects.sipStack.deleteSipProvider(provider);
-
-                    break;
-                } catch (ObjectInUseException ex) {
-                    try {
-                        Thread.sleep(2000);
-                    } catch (InterruptedException e) {
-                        continue;
-                    }
-                }
-            }
-            ProtocolObjects.sipStack.stop();
-            provider = null;
-            inviteTid = null;
-            contactHeader = null;
-            this.listeningPoint = null;
-            this.reInviteCount = 0;
-            SipProvider sipProvider = this.createSipProvider();
-            sipProvider.addSipListener(this);
-            ProtocolObjects.sipStack.start();
-            // Redo this from the start.
-
-            ProtocolObjects.init("shootist", true);
-            this.sendInvite();
-
-        } catch (Exception ex) {
-            logger.error(ex);
-            System.exit(0);
-        }
+       logger.info("\n\nRequest " + request.getMethod()
+               + " received at shootist "
+               + " with server transaction id " + serverTransactionId);
     }
-
-    public void processRequest(RequestEvent requestReceivedEvent) {
-        Request request = requestReceivedEvent.getRequest();
-        ServerTransaction serverTransactionId = requestReceivedEvent
-                .getServerTransaction();
-
-        logger.info("\n\nRequest " + request.getMethod() + " received at "
-                + ProtocolObjects.sipStack.getStackName()
-                + " with server transaction id " + serverTransactionId);
-
-        if (request.getMethod().equals(Request.BYE))
-            processBye(request, serverTransactionId);
-        else if (request.getMethod().equals(Request.INVITE))
-            processInvite(request, serverTransactionId);
-        else if (request.getMethod().equals(Request.ACK))
-            processAck(request, serverTransactionId);
-
-    }
-
-    /**
-     * Handle an incoming INVITE request.
-     *
-     * @param request -- request to process
-     * @param st -- server tx associated with the request.
-     */
-    public void processInvite(Request request, ServerTransaction st) {
-        try {
-            System.out.println("Processing Re-INVITE ");
-            Response response = ProtocolObjects.messageFactory.createResponse(
-                    Response.OK, request);
-            ((ToHeader) response.getHeader(ToHeader.NAME))
-                    .setTag(((ToHeader) request.getHeader(ToHeader.NAME))
-                            .getTag());
-            response.addHeader(this.contactHeader);
-            st.sendResponse(response);
-            TestCase.assertEquals("Re-Inivte Dialog must match ", this.dialog,st.getDialog() );
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            System.exit(0);
-        }
-    }
-
-    /**
-     * Handle an incoming ACK.
-     *
-     * @param request
-     * @param tid
-     */
-
-    public void processAck(Request request, ServerTransaction tid) {
-        try {
-            logger.info("Got an ACK! sending bye : " + tid);
-            if (tid != null) {
-                Dialog dialog = tid.getDialog();
-
-                TestCase.assertSame("Dialog mismatch",dialog, this.dialog);
-
-
-                Request bye = dialog.createRequest(Request.BYE);
-                logger.info("bye request = " + bye);
-                MaxForwardsHeader mf = ProtocolObjects.headerFactory
-                        .createMaxForwardsHeader(10);
-                bye.addHeader(mf);
-                ClientTransaction ct = provider.getNewClientTransaction(bye);
-                dialog.sendRequest(ct);
-            }
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            System.exit(0);
-        }
-    }
-
-    public void processBye(Request request,
-            ServerTransaction serverTransactionId) {
-        try {
-            logger.info("shootist:  got a bye .");
-            if (serverTransactionId == null) {
-                logger.info("shootist:  null TID.");
-                return;
-            }
-            Dialog dialog = serverTransactionId.getDialog();
-            logger.info("Dialog State = " + dialog.getState());
-            Response response = ProtocolObjects.messageFactory.createResponse(
-                    200, request);
-            serverTransactionId.sendResponse(response);
-            logger.info("shootist:  Sending OK.");
-            logger.info("Dialog State = " + dialog.getState());
-
-            if (counter-- > 0)
-                this.shutDownAndRestart();
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            System.exit(0);
-
-        }
-    }
-
 
     /*
      * (non-Javadoc)
@@ -231,7 +102,7 @@ public class Shootist  implements SipListener {
         CSeqHeader cseq = (CSeqHeader) response.getHeader(CSeqHeader.NAME);
 
         logger.info("Response received with client transaction id " + tid
-                + ":\n" + response.getStatusCode());
+                + ":\n" + response.getStatusCode() + " " + cseq.getMethod() + " " + cseq.getSeqNumber());
         if (tid == null) {
             logger.info("Stray response -- dropping ");
             return;
@@ -240,38 +111,50 @@ public class Shootist  implements SipListener {
         logger.info("Dialog = " + tid.getDialog());
         logger.info("Dialog State is " + tid.getDialog().getState());
 
+        final CSeqHeader cseqH = (CSeqHeader) response.getHeader(CSeqHeader.NAME);
         try {
             if (response.getStatusCode() == Response.OK
-                    && ((CSeqHeader) response.getHeader(CSeqHeader.NAME))
-                            .getMethod().equals(Request.INVITE)) {
-
-                // Request cancel = inviteTid.createCancel();
-                // ClientTransaction ct =
-                // sipProvider.getNewClientTransaction(cancel);
+                    && Request.INVITE.equals(cseq.getMethod())) {
 
                 Dialog dialog = tid.getDialog();
                 logger.info("dialogs = " + dialog + " thisdialog = "  + this.dialog);
-                TestCase.assertTrue("dialog mismatch",dialog == this.dialog);
+                TestCase.assertTrue("dialog mismatch", dialog == this.dialog);
 
-                Request ackRequest = dialog.createAck( cseq.getSeqNumber() );
-                logger.info("Ack request to send = " + ackRequest);
-                logger.info("Sending ACK");
-                dialog.sendAck(ackRequest);
-
-                // Send a Re INVITE
-                if (reInviteCount == 0) {
-                    logger.info("Sending RE-INVITE");
-                    this.sendReInvite();
-                    reInviteCount++;
-                } else {
-                    this.okReceived = true;
+                if (2 == inviteCount)
+                {
+                  logger.info("Too many INVITE responses");
+                  TestCase.fail("Too many INVITE responses");
                 }
 
-            } else if (response.getStatusCode() == Response.OK
-                    && ((CSeqHeader) response.getHeader(CSeqHeader.NAME))
-                            .getMethod().equals(Request.BYE)) {
-                if ( this.counter -- > 0)
-                    this.shutDownAndRestart();
+                if (1 == inviteCount)
+                {
+                   logger.info("Sending INFO");
+                   sendInfo();
+                }
+                else
+                {
+                   Request ackRequest = dialog.createAck( cseq.getSeqNumber() );
+                   logger.info("Ack request to send = " + ackRequest);
+                   logger.info("Sending ACK");
+                   dialog.sendAck(ackRequest);
+                }
+
+                // Send a Re INVITE
+                if (0 == inviteCount) {
+                    /*try {*/ Thread.sleep(100); /*} catch (InterruptedException ex) { logger.warn("Interrupted exception: " + ex); }*/
+                    
+                    logger.info("Sending RE-INVITE");
+                    this.sendReInvite();
+                }
+                inviteCount += 1;
+            }
+            else if (Request.INFO.equals(cseq.getMethod()))
+            {
+               // send the ACK for the INVITE (previous transaction)
+               Request ackRequest = dialog.createAck( cseq.getSeqNumber()-1 );
+               logger.info("INVITE Ack request to send = " + ackRequest);
+               logger.info("Sending ACK for invite");
+               dialog.sendAck(ackRequest);
             }
         } catch (Exception ex) {
             logger.error(ex);
@@ -315,6 +198,16 @@ public class Shootist  implements SipListener {
                 .getNewClientTransaction(inviteRequest);
         dialog.sendRequest(ct);
     }
+
+    public void sendInfo() throws Exception {
+       Request inviteRequest = dialog.createRequest(Request.INFO);
+       MaxForwardsHeader mf = ProtocolObjects.headerFactory.createMaxForwardsHeader(10);
+       inviteRequest.setHeader(mf);
+       inviteRequest.setHeader(this.contactHeader);
+       ClientTransaction ct = provider
+               .getNewClientTransaction(inviteRequest);
+       dialog.sendRequest(ct);
+   }
 
     /**
      * Create and send out the initial invite.
@@ -462,12 +355,6 @@ public class Shootist  implements SipListener {
         }
     }
 
-
-    public void checkState() {
-        TestCase.assertTrue(reInviteCount == 1 && this.okReceived);
-
-    }
-
     /*
      * (non-Javadoc)
      *
@@ -507,10 +394,21 @@ public class Shootist  implements SipListener {
     public static void main(String args[]) {
         try {
             ProtocolObjects.init("shootist", true);
-            logger.addAppender(new ConsoleAppender(new SimpleLayout()));
-            Shootist shootist = new Shootist(10);
+            logger.addAppender(new ConsoleAppender(new PatternLayout("%d{HH:mm:ss.SSS} %-5p [%t]: %m%n")));
+            Test1C shootist = new Test1C(10);
             shootist.createSipProvider();
             shootist.provider.addSipListener(shootist);
+
+            /*
+             * Test is:
+             * C send INVITE; S send 180, 200; C send ACK.
+             * C send reINVITE; S send 180, 200;
+             *   C send INFO; S reply 200;
+             *   C send ACK for INVITE
+             * S should not re-send 200 for INVITE (or INFO)
+             *
+             * This is all handled in processResponse()
+             */
             shootist.sendInvite();
         } catch (Exception ex) {
             ex.printStackTrace();
@@ -519,3 +417,4 @@ public class Shootist  implements SipListener {
     }
 
 }
+

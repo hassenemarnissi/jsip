@@ -3,8 +3,12 @@
 	<property file="${root}/ant-build-config.properties" />
 	<property name="classes" value="${root}/classes" />
 	<property name="srcroot" value="${root}/src" />
+	<!--  <property name="log4j" value="log4j-1.2.15.jar" />
+	  <property name="junit" value="junit-3.8.1.jar" />
 	<property name="log4j_jar" value="${root}/lib/${log4j}" />
-	<property name="junit_jar" value="${root}/lib/${junit}" />
+	<property name="junit_jar" value="${root}/lib/${junit}" /> -->
+	<property name="log4j_jar" value="${root}/lib/log4j-1.2.15.jar" />
+	<property name="junit_jar" value="${root}/lib/junit-3.8.1.jar" />
 	<path id="project.class.path">
 		<pathelement location="${classes}" />
 		<pathelement location="${log4j_jar}" />
@@ -14,30 +18,68 @@
 		<javac debug="true" source="${javac.source}" deprecation="${javac.deprecation}" debuglevel="${javac.debuglevel}" srcdir="${srcroot}" includes="examples/reinvite/**/*.java" classpathref="project.class.path" destdir="${classes}">
 		</javac>
 	</target>
+
 	<target name="shootme" depends="make" description="build and run the  example UAS.">
 		<delete file="shootmedebug.txt" />
 		<delete file="shootmelog.txt" />
 		<java classname="examples.reinvite.Shootme" classpathref="project.class.path" fork="true">
 		</java>
 	</target>
-
 	<target name="shootist" depends="make" description="run the example UAC.">
 		<delete file="shootistdebug.txt" />
 		<delete file="shootistlog.txt" />
-		<java classname="examples.reinvite.Shootist" fork="true" classpathref="project.class.path" />
+	  <java classname="examples.reinvite.Shootist" fork="true" classpathref="project.class.path" />
 	</target>
-	<target name="shootistlog" description="Show the  log">
+
+	<target name="test1s" depends="make" description="build and run the  example UAS.">
+		<delete file="shootmedebug.txt" />
+		<delete file="shootmelog.txt" />
+		<java classname="examples.reinvite.Test1S" classpathref="project.class.path" fork="true">
+		</java>
+	</target>
+	<target name="test1c" depends="make" description="run the example UAC.">
+		<delete file="shootistdebug.txt" />
+		<delete file="shootistlog.txt" />
+	  <java classname="examples.reinvite.Test1C" fork="true" classpathref="project.class.path" />
+	</target>
+
+	<target name="test2s" depends="make" description="build and run the  example UAS.">
+		<delete file="shootmedebug.txt" />
+		<delete file="shootmelog.txt" />
+		<java classname="examples.reinvite.Test2S" classpathref="project.class.path" fork="true">
+		</java>
+	</target>
+	<target name="test2c" depends="make" description="run the example UAC.">
+		<delete file="shootistdebug.txt" />
+		<delete file="shootistlog.txt" />
+	  <java classname="examples.reinvite.Test2C" fork="true" classpathref="project.class.path" />
+	</target>
+
+	<target name="test3s" depends="make" description="build and run the  example UAS.">
+		<delete file="shootmedebug.txt" />
+		<delete file="shootmelog.txt" />
+		<java classname="examples.reinvite.Test3S" classpathref="project.class.path" fork="true">
+		</java>
+	</target>
+	<target name="test3c" depends="make" description="run the example UAC.">
+		<delete file="shootistdebug.txt" />
+		<delete file="shootistlog.txt" />
+	  <java classname="examples.reinvite.Test3C" fork="true" classpathref="project.class.path" />
+	</target>
+
+	<target name="shootistlog" description="Show the shootlist (client) log">
 		<java classname="tools.tracesviewer.TracesViewer" fork="true" classpathref="project.class.path">
 			<arg value="-server_file" />
 			<arg value="shootistlog.txt" />
 		</java>
 	</target>
-	<target name="shootmelog" description="Show the  log">
+	<target name="shootmelog" description="Show the shootme (server) log">
 		<java classname="tools.tracesviewer.TracesViewer" fork="true">
 			<arg value="-server_file" />
 			<arg value="shootmelog.txt" />
 		</java>
 	</target>
+
 	<target name="clean" description="clean the logs">
 		<delete failonerror="false" >
 		  <fileset  dir = "." includes="*log.txt" />
