@@ -25,48 +25,27 @@
  */
 package gov.nist.javax.sip.stack;
 
-import gov.nist.core.CommonLogger;
-import gov.nist.core.InternalErrorHandler;
-import gov.nist.core.LogLevels;
-import gov.nist.core.LogWriter;
-import gov.nist.core.ServerLogger;
-import gov.nist.core.StackLogger;
-import gov.nist.javax.sip.SIPConstants;
-import gov.nist.javax.sip.SipProviderImpl;
-import gov.nist.javax.sip.SipStackImpl;
-import gov.nist.javax.sip.address.AddressFactoryImpl;
-import gov.nist.javax.sip.header.Via;
-import gov.nist.javax.sip.message.SIPMessage;
-import gov.nist.javax.sip.message.SIPRequest;
-import gov.nist.javax.sip.message.SIPResponse;
+import gov.nist.core.*;
+import gov.nist.javax.sip.*;
+import gov.nist.javax.sip.address.*;
+import gov.nist.javax.sip.header.*;
+import gov.nist.javax.sip.message.*;
 import gov.nist.javax.sip.stack.SIPClientTransactionImpl.ExpiresTimerTask;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.security.cert.Certificate;
-import java.security.cert.CertificateParsingException;
-import java.security.cert.X509Certificate;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.locks.ReentrantLock;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.io.*;
+import java.net.*;
+import java.security.cert.*;
+import java.text.*;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.*;
+import java.util.concurrent.locks.*;
+import java.util.regex.*;
 
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.sip.Dialog;
-import javax.sip.IOExceptionEvent;
-import javax.sip.TransactionState;
-import javax.sip.address.SipURI;
-import javax.sip.message.Request;
-import javax.sip.message.Response;
+import javax.net.ssl.*;
+import javax.sip.*;
+import javax.sip.address.*;
+import javax.sip.message.*;
 
 /*
  * Modifications for TLS Support added by Daniel J. Martinez Manzano
@@ -93,7 +72,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
     protected boolean toListener; // Flag to indicate that the listener gets
 
     // to see the event.
-    
+
     protected int baseTimerInterval = SIPTransactionStack.BASE_TIMER_INTERVAL;
     /**
      * 5 sec Maximum duration a message will remain in the network
@@ -117,7 +96,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
     protected SIPResponse lastResponse;
 
     // private SIPDialog dialog;
-    
+
     protected boolean isMapped;
 
     private TransactionSemaphore semaphore;
@@ -139,10 +118,10 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
     // so we keep only those data instead
     protected byte[] originalRequestBytes;
     protected long originalRequestCSeqNumber;
-    protected String originalRequestBranch;	
+    protected String originalRequestBranch;
     protected boolean originalRequestHasPort;
-    
-	
+
+
     // Underlying channel being used to send messages for this transaction
     protected transient MessageChannel encapsulatedChannel;
 
@@ -175,22 +154,29 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
     // after the Transaction goes to terminated state.
     protected int collectionTime;
 
-    private boolean terminatedEventDelivered;      
-    
+    private boolean terminatedEventDelivered;
+
     // aggressive flag to optimize eagerly
     private boolean releaseReferences;
-    
+
     // caching flags
     private Boolean inviteTransaction = null;
-    private Boolean dialogCreatingTransaction = null; 
-    
+    private Boolean dialogCreatingTransaction = null;
+
     // caching fork id
     private String forkId = null;
     protected String mergeId = null;
-    
+
     public ExpiresTimerTask expiresTimerTask;
 	// http://java.net/jira/browse/JSIP-420
     private MaxTxLifeTimeListener maxTxLifeTimeListener;
+
+    /**
+     * A list of transaction state listeners to notify when the state of this
+     * transaction changes
+     */
+    private List<TransactionStateListener> transactionStateListeners =
+                                    new ArrayList<TransactionStateListener>();
 
     /**
      * @see gov.nist.javax.sip.stack.SIPTransaction#getBranchId()
@@ -203,14 +189,14 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
     // [Issue 284] https://jain-sip.dev.java.net/issues/show_bug.cgi?id=284
     // JAIN SIP drops 200 OK due to race condition
     // Wrapper that uses a semaphore for non reentrant listener
-    // and a lock for reetrant listener to avoid race conditions 
+    // and a lock for reetrant listener to avoid race conditions
     // when 2 responses 180/200 OK arrives at the same time
     class TransactionSemaphore {
-        
+
         private static final long serialVersionUID = -1634100711669020804L;
         Semaphore sem = null;
         ReentrantLock lock = null;
-        
+
         public TransactionSemaphore() {
             if(((SipStackImpl)sipStack).isReEntrantListener()) {
                 lock = new ReentrantLock();
@@ -218,7 +204,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
                 sem = new Semaphore(1, true);
             }
         }
-        
+
         public boolean acquire() {
             try {
                 if(((SipStackImpl)sipStack).isReEntrantListener()) {
@@ -232,24 +218,24 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
                         ex);
                 InternalErrorHandler.handleException(ex);
                 return false;
-            }        
+            }
         }
-        
+
         public boolean tryAcquire() {
             try {
                 if(((SipStackImpl)sipStack).isReEntrantListener()) {
                     return lock.tryLock(sipStack.maxListenerResponseTime, TimeUnit.SECONDS);
                 } else {
                     return sem.tryAcquire(sipStack.maxListenerResponseTime, TimeUnit.SECONDS);
-                }                
+                }
             } catch (Exception ex) {
                 logger.logError("Unexpected exception trying acquiring sem",
                         ex);
                 InternalErrorHandler.handleException(ex);
                 return false;
-            }        
+            }
         }
-        
+
         public void release() {
             try {
                 if(((SipStackImpl)sipStack).isReEntrantListener()) {
@@ -258,14 +244,14 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
                     }
                 } else {
                     sem.release();
-                }                
+                }
             } catch (Exception ex) {
                 logger.logError("Unexpected exception releasing sem",
                                 ex);
-            }        
+            }
         }
     }
-    
+
     /**
      * The linger timer is used to remove the transaction from the transaction
      * table after it goes into terminated state. This allows connection caching
@@ -275,7 +261,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
      */
     class LingerTimer extends SIPStackTimerTask {
 
-        public LingerTimer() {            
+        public LingerTimer() {
             if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
             	SIPTransaction sipTransaction = SIPTransactionImpl.this;
                 logger.logDebug("LingerTimer : "
@@ -288,7 +274,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
             cleanUp();
         }
     }
-    
+
     /**
      * http://java.net/jira/browse/JSIP-420
      * This timer task will terminate the transaction after a configurable time
@@ -296,20 +282,20 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
      */
     class MaxTxLifeTimeListener extends SIPStackTimerTask {
         SIPTransaction sipTransaction = SIPTransactionImpl.this;
-    
+
         public void runTask() {
-            try {               	
+            try {
             	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
                     logger.logDebug("Fired MaxTxLifeTimeListener for tx " +  sipTransaction + " , tx id "+ sipTransaction.getTransactionId() + " , state " + sipTransaction.getState());
             	}
-            	
+
         		raiseErrorEvent(SIPTransactionErrorEvent.TIMEOUT_ERROR);
-        	
+
         		 SIPStackTimerTask myTimer = new LingerTimer();
                  sipStack.getTimer().schedule(myTimer,
                      SIPTransactionStack.CONNECTION_LINGER_TIME * 1000);
                  maxTxLifeTimeListener = null;
-                 
+
             } catch (Exception ex) {
                 logger.logError("unexpected exception", ex);
             }
@@ -329,10 +315,10 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
 
         sipStack = newParentStack;
         this.semaphore = new TransactionSemaphore();
-        
+
         encapsulatedChannel = newEncapsulatedChannel;
-     
-        if (this.isReliable()) {            
+
+        if (this.isReliable()) {
                 encapsulatedChannel.useCount++;
                 if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
                     logger
@@ -384,19 +370,19 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
         this.originalRequestBranch = topmostVia.getBranch();
         this.originalRequestHasPort = topmostVia.hasPort();
         int originalRequestViaPort = topmostVia.getPort();
-       
+
         if ( originalRequestViaPort == -1 ) {
             if (topmostVia.getTransport().equalsIgnoreCase("TLS") ) {
-                originalRequestViaPort = 5061;         
+                originalRequestViaPort = 5061;
             } else {
                 originalRequestViaPort = 5060;
             }
         }
-                
+
         // just cache the control information so the
         // original request can be released later.
         this.method = newOriginalRequest.getMethod();
-        
+
         this.transactionId = newTransactionId;
 
         originalRequest.setTransaction(this);
@@ -434,7 +420,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
     public Request getRequest() {
         if(isReleaseReferences() && originalRequest == null && originalRequestBytes != null) {
             if(logger.isLoggingEnabled(StackLogger.TRACE_WARN)) {
-                logger.logWarning("reparsing original request " + originalRequestBytes + " since it was eagerly cleaned up, but beware this is not efficient with the aggressive flag set !");                
+                logger.logWarning("reparsing original request " + originalRequestBytes + " since it was eagerly cleaned up, but beware this is not efficient with the aggressive flag set !");
             }
             try {
                 originalRequest = (SIPRequest) sipStack.getMessageParserFactory().createMessageParser(sipStack).parseSIPMessage(originalRequestBytes, true, false, null);
@@ -442,7 +428,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
             } catch (ParseException e) {
                 logger.logError("message " + originalRequestBytes + " could not be reparsed !");
             }
-        }   
+        }
         return (Request) originalRequest;
     }
 
@@ -456,7 +442,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
         }
     	return dialogCreatingTransaction.booleanValue();
     }
-    
+
     /**
      * @see gov.nist.javax.sip.stack.SIPTransaction#isInviteTransaction()
      */
@@ -532,6 +518,8 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
      */
     @Override
     public void setState(int newState) {
+        int oldState = currentState;
+        logger.logError("New state: " + this + " " + newState);
         // PATCH submitted by sribeyron
         if (currentState == TransactionState._COMPLETED) {
             if (newState != TransactionState._TERMINATED
@@ -548,11 +536,22 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
         else
             newState = currentState;
         // END OF PATCH
-        
+
         if(newState == TransactionState._COMPLETED) {
         	enableTimeoutTimer(TIMER_H); // timer H must be started around now
         }
-        
+
+        ArrayList<TransactionStateListener> stateListeners;
+        synchronized (transactionStateListeners )
+        {
+             stateListeners = new ArrayList<TransactionStateListener>(transactionStateListeners);
+        }
+
+        for (TransactionStateListener stateListener : stateListeners)
+        {
+            stateListener.TransactionStateChanged(this, oldState, newState);
+        }
+
         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
             logger.logDebug("Transaction:setState " + newState
                     + " " + this + " branchID = " + this.getBranch()
@@ -568,7 +567,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
     public int getInternalState() {
         return this.currentState;
     }
-    
+
     /**
      * @see gov.nist.javax.sip.stack.SIPTransaction#getState()
      */
@@ -642,7 +641,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
     	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) logger.logDebug("disableTimeoutTimer " + this);
         timeoutTimerTicksLeft = -1;
     }
-    
+
 
     /**
      * @see gov.nist.javax.sip.stack.SIPTransaction#fireTimer()
@@ -668,7 +667,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
                 // Fire the timeout timer
                 fireRetransmissionTimer();
             }
-        } 
+        }
     }
 
     /**
@@ -861,9 +860,9 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
                     }
                     if (channel instanceof RawMessageChannel) {
                         try {
-                        	
+
                         	Runnable processMessageTask = new Runnable() {
-    							
+
     							public void run() {
     								try {
     									((RawMessageChannel) channel).processMessage((SIPMessage) messageToSend.clone());
@@ -1150,7 +1149,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
             throw new IllegalStateException(
                     "Transaction timer is already started");
         baseTimerInterval = retransmitTimer;
-        // Commented out for Issue 303 since those timers are configured separately now  
+        // Commented out for Issue 303 since those timers are configured separately now
 //      T4 = 5000 / BASE_TIMER_INTERVAL;
 //      T2 = 4000 / BASE_TIMER_INTERVAL;
 //      TIMER_D = 32000 / BASE_TIMER_INTERVAL;
@@ -1209,7 +1208,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
         this.encapsulatedChannel = messageChannel;
         if ( this instanceof SIPClientTransaction ) {
         	this.encapsulatedChannel.setEncapsulatedClientTransaction((SIPClientTransaction) this);
-        }        
+        }
     }
 
     /**
@@ -1246,7 +1245,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
             logger.logStackTrace();
         }
         if ( this.sipStack.maxListenerResponseTime == -1 ) {
-            retval = this.semaphore.acquire();            
+            retval = this.semaphore.acquire();
         } else {
             retval = this.semaphore.tryAcquire();
         }
@@ -1255,7 +1254,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
                 "acquireSem() returning : " + retval);
         return retval;
     }
-        
+
 
     /**
      * @see gov.nist.javax.sip.stack.SIPTransaction#releaseSem()
@@ -1314,14 +1313,14 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
         this.terminatedEventDelivered = true;
         return retval;
     }
-    
+
     /**
      * @see gov.nist.javax.sip.stack.SIPTransaction#getCipherSuite()
      */
     @Override
     public String getCipherSuite() throws UnsupportedOperationException {
         if (this.getMessageChannel() instanceof TLSMessageChannel ) {
-            if (  ((TLSMessageChannel) this.getMessageChannel()).getHandshakeCompletedListener() == null ) 
+            if (  ((TLSMessageChannel) this.getMessageChannel()).getHandshakeCompletedListener() == null )
                 return null;
             else if ( ((TLSMessageChannel) this.getMessageChannel()).getHandshakeCompletedListener().getHandshakeCompletedEvent() == null)
                 return null;
@@ -1330,14 +1329,14 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
 
     }
 
-    
+
     /**
      * @see gov.nist.javax.sip.stack.SIPTransaction#getLocalCertificates()
      */
     @Override
     public java.security.cert.Certificate[] getLocalCertificates() throws UnsupportedOperationException {
          if (this.getMessageChannel() instanceof TLSMessageChannel ) {
-            if (  ((TLSMessageChannel) this.getMessageChannel()).getHandshakeCompletedListener() == null ) 
+            if (  ((TLSMessageChannel) this.getMessageChannel()).getHandshakeCompletedListener() == null )
                 return null;
             else if ( ((TLSMessageChannel) this.getMessageChannel()).getHandshakeCompletedListener().getHandshakeCompletedEvent() == null)
                 return null;
@@ -1345,14 +1344,14 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
         } else throw new UnsupportedOperationException("Not a TLS channel");
     }
 
-    
+
     /**
      * @see gov.nist.javax.sip.stack.SIPTransaction#getPeerCertificates()
      */
     @Override
     public java.security.cert.Certificate[] getPeerCertificates() throws SSLPeerUnverifiedException {
         if (this.getMessageChannel() instanceof TLSMessageChannel ) {
-            if (  ((TLSMessageChannel) this.getMessageChannel()).getHandshakeCompletedListener() == null ) 
+            if (  ((TLSMessageChannel) this.getMessageChannel()).getHandshakeCompletedListener() == null )
                 return null;
             else if ( ((TLSMessageChannel) this.getMessageChannel()).getHandshakeCompletedListener().getHandshakeCompletedEvent() == null)
                 return null;
@@ -1478,7 +1477,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
      * @see gov.nist.javax.sip.stack.SIPTransaction#isReleaseReferences()
      */
     @Override
-    public boolean isReleaseReferences() {        
+    public boolean isReleaseReferences() {
         return releaseReferences;
     }
 
@@ -1493,13 +1492,13 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
     public void setReleaseReferences(boolean releaseReferences) {
         this.releaseReferences = releaseReferences;
     }
-    
+
 
     /**
      * @see gov.nist.javax.sip.stack.SIPTransaction#getTimerD()
      */
     @Override
-    public int getTimerD() {      
+    public int getTimerD() {
         return timerD;
     }
     /**
@@ -1528,14 +1527,14 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
         }
         timerD = interval / baseTimerInterval;
     }
-    
+
 
     /**
      * @see gov.nist.javax.sip.stack.SIPTransaction#setTimerT2(int)
      */
     @Override
     public void setTimerT2(int interval) {
-        T2 = interval / baseTimerInterval; 
+        T2 = interval / baseTimerInterval;
     }
 
 
@@ -1548,7 +1547,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
         timerI = T4;
         timerK = T4;
     }
-    
+
     /**
      * @see gov.nist.javax.sip.stack.SIPTransaction#getBaseTimerInterval()
      */
@@ -1588,8 +1587,8 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
     public int getTimerK() {
       return this.timerK;
     }
-    
-    
+
+
     /**
      * @see gov.nist.javax.sip.stack.SIPTransaction#setForkId(java.lang.String)
      */
@@ -1597,7 +1596,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
     public void setForkId(String forkId) {
 		this.forkId = forkId;
 	}
-    
+
     /**
      * @see gov.nist.javax.sip.stack.SIPTransaction#getForkId()
      */
@@ -1605,7 +1604,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
     public String getForkId() {
 		return forkId;
 	}
-  
+
   /**
    * @see gov.nist.javax.sip.stack.SIPTransaction#scheduleMaxTxLifeTimeTimer()
    */
@@ -1619,7 +1618,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
           sipStack.getTimer().schedule(maxTxLifeTimeListener,
                   sipStack.getMaxTxLifetimeInvite() * 1000);
       }
-      
+
       if (maxTxLifeTimeListener == null && !this.getMethod().equalsIgnoreCase(Request.INVITE) && sipStack.getMaxTxLifetimeNonInvite() > 0) {
       	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
               logger.logDebug("Scheduling MaxTxLifeTimeListener for tx " +  this + " , tx id "+ this.getTransactionId() + " , state " + this.getState());
@@ -1654,7 +1653,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
 		}
 		return mergeId;
 	}
-	
+
 	/**
 	 * @see gov.nist.javax.sip.stack.SIPTransaction#getAuditTag()
 	 */
@@ -1670,7 +1669,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
   public void setAuditTag(long auditTag) {
     this.auditTag = auditTag;
   }
-  
+
   /**
    * @see gov.nist.javax.sip.stack.SIPServerTransaction#isTransactionMapped()
    */
@@ -1686,12 +1685,20 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
   public void setTransactionMapped(boolean transactionMapped) {
     isMapped = transactionMapped;
   }
-  
+
   /**
    * @see gov.nist.javax.sip.stack.SIPTransaction#setCollectionTime(int)
    */
   @Override
   public void setCollectionTime(int collectionTime) {
     this.collectionTime = collectionTime;
+  }
+
+  public void addTransactionStateListener(TransactionStateListener listener)
+  {
+      synchronized (transactionStateListeners)
+      {
+          transactionStateListeners.add(listener);
+      }
   }
 }

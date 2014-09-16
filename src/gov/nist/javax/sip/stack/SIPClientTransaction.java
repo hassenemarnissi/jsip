@@ -1,26 +1,20 @@
 package gov.nist.javax.sip.stack;
 
-import gov.nist.javax.sip.ClientTransactionExt;
-import gov.nist.javax.sip.header.Contact;
-import gov.nist.javax.sip.header.Event;
-import gov.nist.javax.sip.header.Via;
-import gov.nist.javax.sip.message.SIPMessage;
-import gov.nist.javax.sip.message.SIPResponse;
+import gov.nist.javax.sip.*;
+import gov.nist.javax.sip.header.*;
+import gov.nist.javax.sip.message.*;
 
-import java.io.IOException;
+import java.io.*;
 
-import javax.sip.ClientTransaction;
-import javax.sip.Dialog;
-import javax.sip.ObjectInUseException;
-import javax.sip.SipException;
-import javax.sip.address.Hop;
-import javax.sip.message.Request;
+import javax.sip.*;
+import javax.sip.address.*;
+import javax.sip.message.*;
 
 public interface SIPClientTransaction extends ClientTransactionExt, SIPTransaction, ServerResponseInterface {
 
   /**
    * Sets the real ResponseInterface this transaction encapsulates.
-   * 
+   *
    * @param newRespondTo ResponseInterface to send messages to.
    */
   public abstract void setResponseInterface(ServerResponseInterface newRespondTo);
@@ -32,16 +26,16 @@ public interface SIPClientTransaction extends ClientTransactionExt, SIPTransacti
 
   /**
    * Deterines if the message is a part of this transaction.
-   * 
+   *
    * @param messageToTest Message to check if it is part of this transaction.
-   * 
+   *
    * @return true if the message is part of this transaction, false if not.
    */
   public abstract boolean isMessagePartOfTransaction(SIPMessage messageToTest);
 
   /**
    * Send a request message through this transaction and onto the client.
-   * 
+   *
    * @param messageToSend Request to process and send.
    */
   public abstract void sendMessage(SIPMessage messageToSend) throws IOException;
@@ -49,7 +43,7 @@ public interface SIPClientTransaction extends ClientTransactionExt, SIPTransacti
   /**
    * Process a new response message through this transaction. If necessary, this message will
    * also be passed onto the TU.
-   * 
+   *
    * @param transactionResponse Response to process.
    * @param sourceChannel Channel that received this message.
    */
@@ -59,21 +53,21 @@ public interface SIPClientTransaction extends ClientTransactionExt, SIPTransacti
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see javax.sip.ClientTransaction#sendRequest()
    */
   public abstract void sendRequest() throws SipException;
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see javax.sip.ClientTransaction#createCancel()
    */
   public abstract Request createCancel() throws SipException;
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see javax.sip.ClientTransaction#createAck()
    */
   public abstract Request createAck() throws SipException;
@@ -118,7 +112,7 @@ public interface SIPClientTransaction extends ClientTransactionExt, SIPTransacti
   /*
    * Terminate a transaction. This marks the tx as terminated The tx scanner will run and remove
    * the tx. (non-Javadoc)
-   * 
+   *
    * @see javax.sip.Transaction#terminate()
    */
   public abstract void terminate() throws ObjectInUseException;
@@ -132,7 +126,7 @@ public interface SIPClientTransaction extends ClientTransactionExt, SIPTransacti
    * Check if the From tag of the response matches the from tag of the original message. A
    * Response with a tag mismatch should be dropped if a Dialog has been created for the
    * original request.
-   * 
+   *
    * @param sipResponse the response to check.
    * @return true if the check passes.
    */
@@ -140,7 +134,7 @@ public interface SIPClientTransaction extends ClientTransactionExt, SIPTransacti
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see gov.nist.javax.sip.stack.ServerResponseInterface#processResponse(gov.nist.javax.sip.message.SIPResponse,
    *      gov.nist.javax.sip.stack.MessageChannel)
    */
@@ -148,14 +142,14 @@ public interface SIPClientTransaction extends ClientTransactionExt, SIPTransacti
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see gov.nist.javax.sip.stack.SIPTransaction#getDialog()
    */
   public abstract Dialog getDialog();
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see gov.nist.javax.sip.stack.SIPTransaction#setDialog(gov.nist.javax.sip.stack.SIPDialog,
    *      gov.nist.javax.sip.message.SIPMessage)
    */
@@ -163,7 +157,7 @@ public interface SIPClientTransaction extends ClientTransactionExt, SIPTransacti
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see gov.nist.javax.sip.stack.SIPTransaction#setDialog(gov.nist.javax.sip.stack.SIPDialog,
    *      gov.nist.javax.sip.message.SIPMessage)
    */
@@ -173,14 +167,14 @@ public interface SIPClientTransaction extends ClientTransactionExt, SIPTransacti
 
   /**
    * Set the next hop ( if it has already been computed).
-   * 
+   *
    * @param hop -- the hop that has been previously computed.
    */
   public abstract void setNextHop(Hop hop);
 
   /**
    * Reeturn the previously computed next hop (avoid computing it twice).
-   * 
+   *
    * @return -- next hop previously computed.
    */
   public abstract Hop getNextHop();
@@ -188,7 +182,7 @@ public interface SIPClientTransaction extends ClientTransactionExt, SIPTransacti
   /**
    * Set this flag if you want your Listener to get Timeout.RETRANSMIT notifications each time a
    * retransmission occurs.
-   * 
+   *
    * @param notifyOnRetransmit the notifyOnRetransmit to set
    */
   public abstract void setNotifyOnRetransmit(boolean notifyOnRetransmit);
@@ -227,4 +221,11 @@ public interface SIPClientTransaction extends ClientTransactionExt, SIPTransacti
    * @return the originalRequestFromTag
    */
   public abstract String getOriginalRequestScheme();
+
+  /**
+   * Adds a transaction state listener
+   *
+   * @param listener the transaction state listener
+   */
+  public void addTransactionStateListener(TransactionStateListener listener);
 }
