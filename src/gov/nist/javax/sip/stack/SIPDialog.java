@@ -72,7 +72,7 @@ import javax.sip.message.*;
  *
  */
 
-public class SIPDialog implements javax.sip.Dialog, DialogExt {
+public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateListener {
 
     private static StackLogger logger = CommonLogger.getLogger(SIPDialog.class);
 
@@ -264,7 +264,9 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
 
   private BlockingQueue<ClientTransaction> clientTransactionQueue = new LinkedBlockingQueue<ClientTransaction>();
 
-  private RequestSenderThread requestSender = new RequestSenderThread("SIP Dialog Request Sender");
+  private RequestSenderThread requestSender = new RequestSenderThread("SIP Dialog Request Sender", this);
+
+public ClientTransaction currentTransaction;
 
     // //////////////////////////////////////////////////////
     // Inner classes
@@ -2530,7 +2532,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
                                boolean allowInterleaving) throws TransactionDoesNotExistException,
                                SipException
     {
-        logger.logDebug("SIPDialog::sendRequest " + this + " clientTransaction = " + clientTransaction);
+        logger.logError("SIPDialog::sendRequest " + this + " clientTransaction = " + clientTransaction);
 
         if ((!allowInterleaving)
                 && clientTransaction.getRequest().getMethod().equals(
@@ -4358,27 +4360,44 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      * Thread that runs and sends client requests based on a queue
      */
     public class RequestSenderThread extends Thread
-                                     implements TransactionStateListener
     {
-        private ClientTransaction currentTransaction = null;
+        private SIPDialog dialog;
 
-        public RequestSenderThread(String threadName)
+        public RequestSenderThread(String threadName, SIPDialog dialog)
         {
             super(threadName);
+            this.dialog = dialog;
+            logger.logError("Request sender thread created");
             start();
         }
 
         public void run()
         {
-            processNextTransaction();
+            while (true)
+            {
+                processNextTransaction();
+                synchronized (requestSender)
+                {
+                    try
+                    {
+                        wait();
+                    }
+                    catch (InterruptedException ex)
+                    {
+                        // TODO Auto-generated catch block
+                        ex.printStackTrace();
+                    }
+                }
+            }
         }
 
-        public void processNextTransaction()
+        private void processNextTransaction()
         {
             // Take the next transaction to process from the queue. This
             // will block until a transaction is available on the queue.
             try
             {
+                logger.logError("Waiting for new client transaction to process " + Arrays.toString(clientTransactionQueue.toArray()));
                 currentTransaction = clientTransactionQueue.take();
                 logger.logError("Processing client transaction: " + currentTransaction);
             }
@@ -4393,7 +4412,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
             {
                 if (currentTransaction != null)
                 {
-                    ((SIPClientTransaction)currentTransaction).addTransactionStateListener(this);
+                    ((SIPClientTransaction)currentTransaction).addTransactionStateListener(dialog);
                     doSendRequest(currentTransaction,
                                   !SIPDialog.this.isBackToBackUserAgent);
                 }
@@ -4409,19 +4428,22 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
                 ex1.printStackTrace();
             }
         }
+    }
 
-        @Override
-        public void TransactionStateChanged(SIPTransaction transaction, int oldState, int newState)
+    @Override
+    public void TransactionStateChanged(SIPTransaction transaction, int oldState, int newState)
+    {
+        logger.logError("Got transaction state changed: " + transaction + " " + oldState + " " + newState);
+        logger.logError("Current transaction is: " + currentTransaction);
+        if (transaction.equals(currentTransaction))
         {
-            logger.logError("Got transaction state changed: " + transaction + " " + oldState + " " + newState);
-            logger.logError("Current transaction is: " + currentTransaction);
-            if (transaction.equals(currentTransaction))
+            if (newState == TransactionState._COMPLETED ||
+                newState == TransactionState._TERMINATED)
             {
-                if (newState == TransactionState._COMPLETED ||
-                    newState == TransactionState._TERMINATED)
+                logger.logError("Transaction completed: " + transaction);
+                synchronized (requestSender)
                 {
-                    logger.logError("Transaction completed: " + transaction);
-                    processNextTransaction();
+                    requestSender.notify();
                 }
             }
         }
