@@ -519,7 +519,6 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
     @Override
     public void setState(int newState) {
         int oldState = currentState;
-        logger.logError("New state: " + this + " " + newState);
         // PATCH submitted by sribeyron
         if (currentState == TransactionState._COMPLETED) {
             if (newState != TransactionState._TERMINATED

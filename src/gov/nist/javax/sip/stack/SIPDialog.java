@@ -2514,8 +2514,6 @@ public ClientTransaction currentTransaction;
         if (clientTransaction == null)
             throw new NullPointerException("null parameter");
 
-        logger.logError("Adding transaction to queue: " + clientTransaction);
-
         try
         {
             clientTransactionQueue.put(clientTransaction);
@@ -2525,14 +2523,13 @@ public ClientTransaction currentTransaction;
             // TODO Auto-generated catch block
             ex.printStackTrace();
         }
-        logger.logError("Queue is now: " + Arrays.toString(clientTransactionQueue.toArray()));
     }
 
     private void doSendRequest(ClientTransaction clientTransaction,
                                boolean allowInterleaving) throws TransactionDoesNotExistException,
                                SipException
     {
-        logger.logError("SIPDialog::sendRequest " + this + " clientTransaction = " + clientTransaction);
+        logger.logDebug("SIPDialog::sendRequest " + this + " clientTransaction = " + clientTransaction);
 
         if ((!allowInterleaving)
                 && clientTransaction.getRequest().getMethod().equals(
@@ -4367,15 +4364,26 @@ public ClientTransaction currentTransaction;
         {
             super(threadName);
             this.dialog = dialog;
-            logger.logError("Request sender thread created");
             start();
         }
 
         public void run()
         {
+            logger.logError("Request sender thread created. Dialog " + dialog);
             while (true)
             {
-                processNextTransaction();
+                if (currentTransaction == null)
+                {
+                    logger.logError("Processing next transaction as current transaction is null");
+                    processNextTransaction();
+                }
+                else if (currentTransaction.getState().equals(TransactionState.COMPLETED) ||
+                         currentTransaction.getState().equals(TransactionState.TERMINATED))
+                {
+                    logger.logError("Processing next transaction as state is " + currentTransaction.getState());
+                    processNextTransaction();
+                }
+
                 synchronized (requestSender)
                 {
                     try
@@ -4397,9 +4405,8 @@ public ClientTransaction currentTransaction;
             // will block until a transaction is available on the queue.
             try
             {
-                logger.logError("Waiting for new client transaction to process " + Arrays.toString(clientTransactionQueue.toArray()));
+                logger.logError("Waiting for new client transaction to process\n" + Arrays.toString(clientTransactionQueue.toArray()));
                 currentTransaction = clientTransactionQueue.take();
-                logger.logError("Processing client transaction: " + currentTransaction);
             }
             catch (InterruptedException ex)
             {
@@ -4433,14 +4440,11 @@ public ClientTransaction currentTransaction;
     @Override
     public void TransactionStateChanged(SIPTransaction transaction, int oldState, int newState)
     {
-        logger.logError("Got transaction state changed: " + transaction + " " + oldState + " " + newState);
-        logger.logError("Current transaction is: " + currentTransaction);
         if (transaction.equals(currentTransaction))
         {
             if (newState == TransactionState._COMPLETED ||
                 newState == TransactionState._TERMINATED)
             {
-                logger.logError("Transaction completed: " + transaction);
                 synchronized (requestSender)
                 {
                     requestSender.notify();
