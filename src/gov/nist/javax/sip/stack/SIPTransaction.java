@@ -25,22 +25,17 @@
  */
 package gov.nist.javax.sip.stack;
 
-import gov.nist.javax.sip.SipProviderImpl;
-import gov.nist.javax.sip.TransactionExt;
-import gov.nist.javax.sip.header.Via;
-import gov.nist.javax.sip.message.SIPMessage;
-import gov.nist.javax.sip.message.SIPRequest;
-import gov.nist.javax.sip.message.SIPResponse;
+import gov.nist.javax.sip.*;
+import gov.nist.javax.sip.header.*;
+import gov.nist.javax.sip.message.*;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.util.List;
+import java.io.*;
+import java.net.*;
+import java.util.*;
 
-import javax.net.ssl.SSLPeerUnverifiedException;
-import javax.sip.Dialog;
-import javax.sip.TransactionState;
-import javax.sip.message.Request;
-import javax.sip.message.Response;
+import javax.net.ssl.*;
+import javax.sip.*;
+import javax.sip.message.*;
 
 public interface SIPTransaction extends TransactionExt {
 
@@ -57,14 +52,14 @@ public interface SIPTransaction extends TransactionExt {
   /**
    * INVITE transaction timeout timer
    */
-  public static final int TIMER_B = 64;
+  public static final int TIMER_B = 16;
 
   public static final int TIMER_J = 64;
 
   public static final int TIMER_F = 64;
 
   public static final int TIMER_H = 64;
-  
+
   /**
    * Initialized but no state assigned.
    */
@@ -93,14 +88,14 @@ public interface SIPTransaction extends TransactionExt {
    * Terminated state.
    */
   public static final TransactionState TERMINATED_STATE = TransactionState.TERMINATED;
-  
+
   public String getBranchId();
 
   public void cleanUp();
 
   /**
    * Sets the request message that this transaction handles.
-   * 
+   *
    * @param newOriginalRequest
    *          Request being handled.
    */
@@ -108,21 +103,21 @@ public interface SIPTransaction extends TransactionExt {
 
   /**
    * Gets the request being handled by this transaction.
-   * 
+   *
    * @return -- the original Request associated with this transaction.
    */
   public SIPRequest getOriginalRequest();
 
   /**
    * Get the original request but cast to a Request structure.
-   * 
+   *
    * @return the request that generated this transaction.
    */
   public Request getRequest();
 
   /**
    * Returns a flag stating whether this transaction is for a request that creates a dialog.
-   * 
+   *
    * @return -- true if this is a request that creates a dialog, false if not.
    */
   public boolean isDialogCreatingTransaction();
@@ -130,21 +125,29 @@ public interface SIPTransaction extends TransactionExt {
   /**
    * Returns a flag stating whether this transaction is for an INVITE request
    * or not.
-   * 
+   *
    * @return -- true if this is an INVITE request, false if not.
    */
   public boolean isInviteTransaction();
 
   /**
+   * Returns a flag stating whether this transaction is for a REGISTER request
+   * or not.
+   *
+   * @return -- true if this is a REGISTER request, false if not.
+   */
+  public boolean isRegisterTransaction();
+
+  /**
    * Return true if the transaction corresponds to a CANCEL message.
-   * 
+   *
    * @return -- true if the transaciton is a CANCEL transaction.
    */
   public boolean isCancelTransaction();
 
   /**
    * Return a flag that states if this is a BYE transaction.
-   * 
+   *
    * @return true if the transaciton is a BYE transaction.
    */
   public boolean isByeTransaction();
@@ -152,15 +155,15 @@ public interface SIPTransaction extends TransactionExt {
   /**
    * Returns the message channel used for transmitting/receiving messages for
    * this transaction. Made public in support of JAIN dual transaction model.
-   * 
+   *
    * @return Encapsulated MessageChannel.
-   * 
+   *
    */
   public MessageChannel getMessageChannel();
 
   /**
    * Sets the Via header branch parameter used to identify this transaction.
-   * 
+   *
    * @param newBranch
    *          New string used as the branch for this transaction.
    */
@@ -168,28 +171,28 @@ public interface SIPTransaction extends TransactionExt {
 
   /**
    * Gets the current setting for the branch parameter of this transaction.
-   * 
+   *
    * @return Branch parameter for this transaction.
    */
   public String getBranch();
 
   /**
    * Get the method of the request used to create this transaction.
-   * 
+   *
    * @return the method of the request for the transaction.
    */
   public String getMethod();
 
   /**
    * Get the Sequence number of the request used to create the transaction.
-   * 
+   *
    * @return the cseq of the request used to create the transaction.
    */
   public long getCSeq();
 
   /**
    * Changes the state of this transaction.
-   * 
+   *
    * @param newState
    *          New state of this transaction.
    */
@@ -197,21 +200,21 @@ public interface SIPTransaction extends TransactionExt {
 
   /**
    * Gets the current state of this transaction.
-   * 
+   *
    * @return Current state of this transaction.
    */
   public int getInternalState();
 
   /**
    * Gets the current state of this transaction.
-   * 
+   *
    * @return Current state of this transaction.
    */
   public TransactionState getState();
 
   /**
    * Tests if this transaction has terminated.
-   * 
+   *
    * @return Trus if this transaction is terminated, false if not.
    */
   public boolean isTerminated();
@@ -227,7 +230,7 @@ public interface SIPTransaction extends TransactionExt {
   public String getPeerAddress();
 
   public int getPeerPort();
-  
+
   public String getPeerProtocol();
 
   // @@@ hagai
@@ -248,7 +251,7 @@ public interface SIPTransaction extends TransactionExt {
 
   /**
    * Process the message through the transaction and sends it to the SIP peer.
-   * 
+   *
    * @param messageToSend
    *          Message to send to the SIP peer.
    */
@@ -256,7 +259,7 @@ public interface SIPTransaction extends TransactionExt {
 
   /**
    * Adds a new event listener to this transaction.
-   * 
+   *
    * @param newListener
    *          Listener to add.
    */
@@ -264,7 +267,7 @@ public interface SIPTransaction extends TransactionExt {
 
   /**
    * Removed an event listener from this transaction.
-   * 
+   *
    * @param oldListener
    *          Listener to remove.
    */
@@ -276,7 +279,7 @@ public interface SIPTransaction extends TransactionExt {
    * session is setup between a User Agent Client and a User Agent Server,
    * either by a 1xx Provisional Response for an early dialog or a 200OK
    * Response for a committed dialog.
-   * 
+   *
    * @return the Dialog Object of this Transaction object.
    * @see Dialog
    */
@@ -284,7 +287,7 @@ public interface SIPTransaction extends TransactionExt {
 
   /**
    * set the dialog object.
-   * 
+   *
    * @param sipDialog --
    *          the dialog to set.
    * @param dialogId --
@@ -295,7 +298,7 @@ public interface SIPTransaction extends TransactionExt {
   /**
    * Returns the current value of the retransmit timer in milliseconds used to
    * retransmit messages over unreliable transports.
-   * 
+   *
    * @return the integer value of the retransmit timer in milliseconds.
    */
   public int getRetransmitTimer();
@@ -308,7 +311,7 @@ public interface SIPTransaction extends TransactionExt {
   /**
    * Get the last response. This is used internally by the implementation.
    * Dont rely on it.
-   * 
+   *
    * @return the last response received (for client transactions) or sent (for
    *         server transactions).
    */
@@ -339,11 +342,11 @@ public interface SIPTransaction extends TransactionExt {
    * transction. This does not take the transaction state into account when
    * doing the check otherwise it is identical to isMessagePartOfTransaction.
    * This is useful for checking if a CANCEL belongs to this transaction.
-   * 
+   *
    * @param requestToTest
    *          is the request to test.
    * @return true if the the request belongs to the transaction.
-   * 
+   *
    */
   public boolean doesCancelMatchTransaction(SIPRequest requestToTest);
 
@@ -356,7 +359,7 @@ public interface SIPTransaction extends TransactionExt {
    * the endpoints will be relatively close. The external network is the
    * general Internet. This functionality allows different retransmit times
    * for either side.
-   * 
+   *
    * @param retransmitTimer -
    *          the new integer value of the retransmit timer in milliseconds.
    */
@@ -376,18 +379,18 @@ public interface SIPTransaction extends TransactionExt {
    * This is provided as a conveniant way of keeping book-keeping data for
    * applications. Note that null clears the application data pointer
    * (releases it).
-   * 
+   *
    * @param applicationData --
    *          application data pointer to set. null clears the applicationd
    *          data pointer.
-   * 
+   *
    */
 
   public void setApplicationData(Object applicationData);
 
   /**
    * Get the application data associated with this transaction.
-   * 
+   *
    * @return stored application data.
    */
   public Object getApplicationData();
@@ -400,7 +403,7 @@ public interface SIPTransaction extends TransactionExt {
 
   /**
    * Return the SipProvider for which the transaction is assigned.
-   * 
+   *
    * @return the SipProvider for the transaction.
    */
   public SipProviderImpl getSipProvider();
@@ -408,26 +411,26 @@ public interface SIPTransaction extends TransactionExt {
   /**
    * Raise an IO Exception event - this is used for reporting asynchronous IO
    * Exceptions that are attributable to this transaction.
-   * 
+   *
    */
   public void raiseIOExceptionEvent();
 
   /**
    * A given tx can process only a single outstanding event at a time. This
    * semaphore gaurds re-entrancy to the transaction.
-   * 
+   *
    */
   public boolean acquireSem();
 
   /**
    * Release the transaction semaphore.
-   * 
+   *
    */
   public void releaseSem();
 
   /**
    * Set true to pass the request up to the listener. False otherwise.
-   * 
+   *
    */
 
   public boolean passToListener();
@@ -447,84 +450,84 @@ public interface SIPTransaction extends TransactionExt {
   /**
    * Extract identities from certificates exchanged over TLS, based on guidelines
    * from rfc5922.
-   * 
+   *
    * @return list of authenticated identities
    */
   public List<String> extractCertIdentities() throws SSLPeerUnverifiedException;
 
   /**
    * Tests a message to see if it is part of this transaction.
-   * 
+   *
    * @return True if the message is part of this transaction, false if not.
    */
   public boolean isMessagePartOfTransaction(SIPMessage messageToTest);
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see gov.nist.javax.sip.DialogExt#isReleaseReferences()
    */
   public boolean isReleaseReferences();
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see gov.nist.javax.sip.DialogExt#setReleaseReferences(boolean)
    */
   public void setReleaseReferences(boolean releaseReferences);
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see gov.nist.javax.sip.TransactionExt#getTimerD()
    */
   public int getTimerD();
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see gov.nist.javax.sip.TransactionExt#getTimerT2()
    */
   public int getTimerT2();
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see gov.nist.javax.sip.TransactionExt#getTimerT4()
    */
   public int getTimerT4();
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see gov.nist.javax.sip.TransactionExt#setTimerD(int)
    */
   public void setTimerD(int interval);
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see gov.nist.javax.sip.TransactionExt#setTimerT2(int)
    */
   public void setTimerT2(int interval);
 
   /*
    * (non-Javadoc)
-   * 
+   *
    * @see gov.nist.javax.sip.TransactionExt#setTimerT4(int)
    */
   public void setTimerT4(int interval);
 
   /**
    * Sets the fork id for the transaction.
-   * 
+   *
    * @param forkId
    */
   public void setForkId(String forkId);
 
   /**
    * Retrieves the fork id for the transaction.
-   * 
+   *
    * @return
    */
   public String getForkId();
