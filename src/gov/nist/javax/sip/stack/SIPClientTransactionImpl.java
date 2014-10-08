@@ -940,6 +940,14 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
     if (this.getInternalState() >= 0)
       throw new IllegalTransactionStateException("Request already sent", Reason.RequestAlreadySent);
 
+    // If this transaction has a dialog then send the request through that. The
+    // dialog has a queue which ensures we do not send overlapping transactions.
+    if (getDialog() != null)
+    {
+        getDialog().sendRequest(this);
+        return;
+    }
+
     try {
       sipRequest.checkHeaders();
     } catch (ParseException ex) {

@@ -72,8 +72,9 @@ import javax.sip.message.*;
  *
  */
 
-public class SIPDialog implements javax.sip.Dialog, DialogExt {
-	private static StackLogger logger = CommonLogger.getLogger(SIPDialog.class);
+public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateListener {
+
+    private static StackLogger logger = CommonLogger.getLogger(SIPDialog.class);
 
     private static final long serialVersionUID = -1429794423085204069L;
 
@@ -257,9 +258,26 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
 	private int ackSemTakenFor;
 	private Set<String> responsesReceivedInForkingCase = new HashSet<String>(0);
 
-  private SIPDialog originalDialog;
+	private SIPDialog originalDialog;
 
-  private AckSendingStrategy ackSendingStrategy = new AckSendingStrategyImpl();
+	private AckSendingStrategy ackSendingStrategy = new AckSendingStrategyImpl();
+
+	/**
+	 * The client transaction queue that holds client transactions waiting to be
+     * processed. The queue is blocking so the requestSender thread will block
+     * until there is work to do. The queue is unblocked once the current
+     * transaction transitions to the completed or terminated state.
+	 */
+	private final BlockingQueue<ClientTransaction> clientTransactionQueue =
+	                               new LinkedBlockingQueue<ClientTransaction>();
+
+	/**
+	 * The thread that is responsible for taking transactions from the client
+	 * queue and transmitting them. This is a separate thread as it blocks
+     * while there is no work to do.
+	 */
+	private final RequestSenderThread requestSender =
+	                 new RequestSenderThread();
 
     /**
      * tuple holding a method (of a transaction) and the response code, if any
@@ -279,6 +297,11 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      * overlapping transactions.
      */
     private Map<Long, MethodResponse> transactions = new HashMap<Long, MethodResponse>();
+
+	/**
+	 * The current client transaction that this dialog is processing.
+	 */
+	private ClientTransaction currentTransaction;
 
     // //////////////////////////////////////////////////////
     // Inner classes
@@ -2538,32 +2561,64 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
         }
     }
 
-    /*
-     * (non-Javadoc)
+    /**
+     * Adds the given client transaction to a queue for processing in turn
      *
-     * @see javax.sip.Dialog#sendRequest(javax.sip.ClientTransaction)
+     * @param clientTransactionId the client transaction to queue
+     * @throws TransactionDoesNotExistException
+     * @throws SipException
      */
-
-    @Override
     public void sendRequest(ClientTransaction clientTransactionId)
             throws TransactionDoesNotExistException, SipException {
         this.sendRequest(clientTransactionId, !this.isBackToBackUserAgent);
     }
 
+    /**
+     * Adds the given client transaction to a queue for processing in turn
+     *
+     * @param clientTransactionId the client transaction to queue
+     * @param allowInterleaving whether the transaction allows interleaving
+     * @throws TransactionDoesNotExistException
+     * @throws SipException
+     */
     public void sendRequest(ClientTransaction clientTransaction,
             boolean allowInterleaving) throws TransactionDoesNotExistException,
-            SipException {
-
+            SipException
+    {
         if (clientTransaction == null)
             throw new NullPointerException("null parameter");
 
+        try
+        {
+            // Put the transaction on the queue for processing in turn
+            clientTransactionQueue.put(clientTransaction);
+        }
+        catch (InterruptedException ex)
+        {
+            // Should never happen as the client transaction queue does not
+            // have a maximum size
+            logger.logError("Interrupted while queueing transaction", ex);
+        }
+    }
+
+    /**
+     * Transmits the client transaction
+     *
+     * @param clientTransaction the client transaction to transmit
+     * @param allowInterleaving whether the transaction allows interleaving
+     * @throws TransactionDoesNotExistException
+     * @throws SipException
+     */
+    private void doSendRequest(ClientTransaction clientTransaction,
+                               boolean allowInterleaving)
+                        throws TransactionDoesNotExistException,
+                               SipException
+    {
+        logger.logDebug("SIPDialog::sendRequest " + this + " clientTransaction = " + clientTransaction);
 
         if ((!allowInterleaving)
                 && clientTransaction.getRequest().getMethod().equals(
                         Request.INVITE)) {
-        	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
-        		logger.logDebug("SIPDialog::sendRequest " + this + " clientTransaction = " + clientTransaction);
-        	}
             sipStack.getReinviteExecutor().execute(
                     (new ReInviteSender(clientTransaction)));
             return;
@@ -4312,6 +4367,11 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
                 routeList = null;
             }
             responsesReceivedInForkingCase.clear();
+
+            // Clear up the client transaction queue and kill the request
+            // sender thread
+            clientTransactionQueue.clear();
+            requestSender.disable();
         }
     }
 
@@ -4413,5 +4473,169 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt {
      */
     public void setAckSendingStrategy(AckSendingStrategy ackSendingStrategy) {
       this.ackSendingStrategy = ackSendingStrategy;
+    }
+
+    @Override
+    public void transactionStateChanged(SIPTransaction transaction, int oldState, int newState)
+    {
+        // If the current transaction has transitioned into a completed or
+        // terminated state then notify the request sender thread so it can
+        // continue processing transactions from the queue.
+        if (transaction.equals(currentTransaction))
+        {
+            if (newState == TransactionState._COMPLETED ||
+                newState == TransactionState._TERMINATED)
+            {
+                synchronized (requestSender)
+                {
+                    requestSender.notify();
+                    ((SIPClientTransaction) currentTransaction).removeTransactionStateListener(this);
+                }
+            }
+        }
+    }
+
+    /**
+     * Thread that sends client transaction requests from a queue
+     */
+    public class RequestSenderThread extends Thread
+    {
+        /**
+         * Whether this thread is currently enabled.
+         */
+        private boolean enabled = true;
+
+        /**
+         * Creates a new thread for sending client transaction requests
+         *
+         * @param threadName the name of this thread
+         */
+        public RequestSenderThread()
+        {
+            super("SIP Dialog Request Sender");
+            start();
+        }
+
+        /**
+         * Disables this thread. This prevents the thread from sending any more
+         * transaction requests.
+         */
+        public void disable()
+        {
+            enabled = false;
+            clientTransactionQueue.notify();
+            synchronized (this)
+            {
+                // Interrupt the request sender thread so it can stop processing
+                // items from the queue.
+                requestSender.interrupt();
+            }
+        }
+
+        /**
+         * While this thread is enabled, monitor the client transaction queue
+         * and processes work items from it as soon as possible
+         */
+        public void run()
+        {
+            logger.logDebug("Request sender thread started for dialog " + SIPDialog.this);
+            while (enabled)
+            {
+                // If we are not currently processing a transaction then
+                // we can start processing.
+                if (currentTransaction == null)
+                {
+                    if (!processNextTransaction())
+                    {
+                        continue;
+                    }
+                }
+                // If the current transaction has completed or been terminated,
+                // we can continue processing.
+                else if (currentTransaction.getState().equals(TransactionState.COMPLETED) ||
+                         currentTransaction.getState().equals(TransactionState.TERMINATED))
+                {
+                    if (!processNextTransaction())
+                    {
+                        continue;
+                    }
+                }
+
+                // Check that the transaction has not completed before blocking
+                // this thread
+                if (currentTransaction == null ||
+                    currentTransaction.getState().equals(TransactionState.COMPLETED) ||
+                    currentTransaction.getState().equals(TransactionState.TERMINATED))
+                {
+                    continue;
+                }
+
+                synchronized (this)
+                {
+                    try
+                    {
+                        wait();
+                    }
+                    catch (InterruptedException ex)
+                    {
+                        // We don't really care if we are interrupted, we
+                        // double check that the previous transaction has
+                        // completed before continuing.
+                    }
+                }
+            }
+        }
+
+        /**
+         * Processes the next transaction from the client transaction queue.
+         */
+        private boolean processNextTransaction()
+        {
+            // Take the next transaction to process from the queue. This
+            // will block until a transaction is available on the queue.
+            try
+            {
+                logger.logDebug("Waiting for new client transaction to process." +
+                                "Current queue is" + Arrays.toString(
+                                             clientTransactionQueue.toArray()));
+                currentTransaction = clientTransactionQueue.take();
+                logger.logDebug("Got client transaction from queue " + currentTransaction);
+            }
+            catch (InterruptedException ex)
+            {
+                logger.logError("Interrupted while taking a job from the client transaction queue", ex);
+                currentTransaction = null;
+                // Return an error so the thread can immediately process
+                // the next work item from the queue.
+                return false;
+            }
+
+            // We have a transaction to process. Go ahead and process it.
+            try
+            {
+                if (currentTransaction != null)
+                {
+                    // Add ourselves as a listener to this transaction so we
+                    // can process the next item from the queue once the
+                    // transaction has moved into the completed or terminated
+                    // state.
+                    ((SIPClientTransaction)currentTransaction).addTransactionStateListener(SIPDialog.this);
+                    doSendRequest(currentTransaction,
+                                  !SIPDialog.this.isBackToBackUserAgent);
+                }
+            }
+            catch (TransactionDoesNotExistException ex)
+            {
+                logger.logError("Asked to process a transaction that does not exist any more", ex);
+                return false;
+            }
+            catch (SipException ex)
+            {
+                logger.logError("Processing transaction failed", ex);
+                return false;
+            }
+
+            return true;
+        }
     }
 }

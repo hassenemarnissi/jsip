@@ -616,5 +616,4 @@ public interface SIPTransaction extends TransactionExt {
   int getT4();
 
   int getBaseTimerInterval();
-
 }

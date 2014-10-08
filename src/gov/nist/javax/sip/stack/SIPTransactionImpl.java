@@ -173,6 +173,13 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
     private MaxTxLifeTimeListener maxTxLifeTimeListener;
 
     /**
+     * A list of transaction state listeners to notify when the state of this
+     * transaction changes
+     */
+    private List<TransactionStateListener> transactionStateListeners =
+                                    new ArrayList<TransactionStateListener>();
+
+    /**
      * @see gov.nist.javax.sip.stack.SIPTransaction#getBranchId()
      */
     @Override
@@ -520,6 +527,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
      */
     @Override
     public void setState(int newState) {
+        int oldState = currentState;
         // PATCH submitted by sribeyron
         if (currentState == TransactionState._COMPLETED) {
             if (newState != TransactionState._TERMINATED
@@ -539,6 +547,17 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
 
         if(newState == TransactionState._COMPLETED) {
         	enableTimeoutTimer(TIMER_H); // timer H must be started around now
+        }
+
+        ArrayList<TransactionStateListener> stateListeners;
+        synchronized (transactionStateListeners )
+        {
+             stateListeners = new ArrayList<TransactionStateListener>(transactionStateListeners);
+        }
+
+        for (TransactionStateListener stateListener : stateListeners)
+        {
+            stateListener.transactionStateChanged(this, oldState, newState);
         }
 
         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
@@ -1681,5 +1700,21 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
   @Override
   public void setCollectionTime(int collectionTime) {
     this.collectionTime = collectionTime;
+  }
+
+  public void addTransactionStateListener(TransactionStateListener listener)
+  {
+      synchronized (transactionStateListeners)
+      {
+          transactionStateListeners.add(listener);
+      }
+  }
+
+  public void removeTransactionStateListener(TransactionStateListener listener)
+  {
+      synchronized (transactionStateListeners)
+      {
+          transactionStateListeners.remove(listener);
+      }
   }
 }
