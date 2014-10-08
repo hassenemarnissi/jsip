@@ -548,7 +548,7 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
 
         for (TransactionStateListener stateListener : stateListeners)
         {
-            stateListener.TransactionStateChanged(this, oldState, newState);
+            stateListener.transactionStateChanged(this, oldState, newState);
         }
 
         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
@@ -1698,6 +1698,14 @@ public abstract class SIPTransactionImpl implements SIPTransaction {
       synchronized (transactionStateListeners)
       {
           transactionStateListeners.add(listener);
+      }
+  }
+
+  public void removeTransactionStateListener(TransactionStateListener listener)
+  {
+      synchronized (transactionStateListeners)
+      {
+          transactionStateListeners.remove(listener);
       }
   }
 }

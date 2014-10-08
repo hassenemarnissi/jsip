@@ -228,4 +228,11 @@ public interface SIPClientTransaction extends ClientTransactionExt, SIPTransacti
    * @param listener the transaction state listener
    */
   public void addTransactionStateListener(TransactionStateListener listener);
+
+  /**
+   * Removes a transaction state listener
+   *
+   * @param listener the transaction state listener
+   */
+  public void removeTransactionStateListener(TransactionStateListener listener);
 }

@@ -264,23 +264,25 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
 
 	/**
 	 * The client transaction queue that holds client transactions waiting to be
-     * processed.
+     * processed. The queue is blocking so the requestSender thread will block
+     * until there is work to do. The queue is unblocked once the current
+     * transaction transitions to the completed or terminated state.
 	 */
-	private BlockingQueue<ClientTransaction> clientTransactionQueue =
+	private final BlockingQueue<ClientTransaction> clientTransactionQueue =
 	                               new LinkedBlockingQueue<ClientTransaction>();
 
 	/**
 	 * The thread that is responsible for taking transactions from the client
-     * queue and transmitting them. This is a separate thread as it blocks
+	 * queue and transmitting them. This is a separate thread as it blocks
      * while there is no work to do.
 	 */
-	private RequestSenderThread requestSender =
-	                 new RequestSenderThread("SIP Dialog Request Sender", this);
+	private final RequestSenderThread requestSender =
+	                 new RequestSenderThread();
 
 	/**
 	 * The current client transaction that this dialog is processing.
 	 */
-	protected ClientTransaction currentTransaction;
+	private ClientTransaction currentTransaction;
 
     // //////////////////////////////////////////////////////
     // Inner classes
@@ -4292,11 +4294,6 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
             // sender thread
             clientTransactionQueue.clear();
             requestSender.disable();
-            synchronized (requestSender)
-            {
-                // Notify the request sender thread
-                requestSender.notify();
-            }
         }
     }
 
@@ -4398,10 +4395,11 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
     }
 
     @Override
-    public void TransactionStateChanged(SIPTransaction transaction, int oldState, int newState)
+    public void transactionStateChanged(SIPTransaction transaction, int oldState, int newState)
     {
         // If the current transaction has transitioned into a completed or
-        // terminated state then
+        // terminated state then notify the request sender thread so it can
+        // continue processing transactions from the queue.
         if (transaction.equals(currentTransaction))
         {
             if (newState == TransactionState._COMPLETED ||
@@ -4410,6 +4408,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
                 synchronized (requestSender)
                 {
                     requestSender.notify();
+                    ((SIPClientTransaction) currentTransaction).removeTransactionStateListener(this);
                 }
             }
         }
@@ -4421,11 +4420,6 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
     public class RequestSenderThread extends Thread
     {
         /**
-         * The SIP dialog this thread is running in
-         */
-        private SIPDialog dialog;
-
-        /**
          * Whether this thread is currently enabled.
          */
         private boolean enabled = true;
@@ -4434,13 +4428,10 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
          * Creates a new thread for sending client transaction requests
          *
          * @param threadName the name of this thread
-         * @param dialog the dialog through which to send client transaction
-         * requests
          */
-        public RequestSenderThread(String threadName, SIPDialog dialog)
+        public RequestSenderThread()
         {
-            super(threadName);
-            this.dialog = dialog;
+            super("SIP Dialog Request Sender");
             start();
         }
 
@@ -4451,6 +4442,13 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
         public void disable()
         {
             enabled = false;
+            clientTransactionQueue.notify();
+            synchronized (this)
+            {
+                // Interrupt the request sender thread so it can stop processing
+                // items from the queue.
+                requestSender.interrupt();
+            }
         }
 
         /**
@@ -4459,24 +4457,30 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
          */
         public void run()
         {
-            logger.logDebug("Request sender thread started for dialog " + dialog);
+            logger.logDebug("Request sender thread started for dialog " + SIPDialog.this);
             while (enabled)
             {
                 // If we are not currently processing a transaction then
                 // we can start processing.
                 if (currentTransaction == null)
                 {
-                    processNextTransaction();
+                    if (!processNextTransaction())
+                    {
+                        continue;
+                    }
                 }
                 // If the current transaction has completed or been terminated,
                 // we can continue processing.
                 else if (currentTransaction.getState().equals(TransactionState.COMPLETED) ||
                          currentTransaction.getState().equals(TransactionState.TERMINATED))
                 {
-                    processNextTransaction();
+                    if (!processNextTransaction())
+                    {
+                        continue;
+                    }
                 }
 
-                synchronized (requestSender)
+                synchronized (this)
                 {
                     try
                     {
@@ -4495,7 +4499,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
         /**
          * Processes the next transaction from the client transaction queue.
          */
-        private void processNextTransaction()
+        private boolean processNextTransaction()
         {
             // Take the next transaction to process from the queue. This
             // will block until a transaction is available on the queue.
@@ -4505,16 +4509,14 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
                                 "Current queue is" + Arrays.toString(
                                              clientTransactionQueue.toArray()));
                 currentTransaction = clientTransactionQueue.take();
+                logger.logDebug("Got client transaction from queue " + currentTransaction);
             }
             catch (InterruptedException ex)
             {
                 logger.logError("Interrupted while taking a job from the client transaction queue", ex);
-                synchronized (this)
-                {
-                    // Notify this thread so it continues processing
-                    notify();
-                }
-                return;
+                // Return an error so the thread can immediately process
+                // the next work item from the queue.
+                return false;
             }
 
             // We have a transaction to process. Go ahead and process it.
@@ -4522,7 +4524,11 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
             {
                 if (currentTransaction != null)
                 {
-                    ((SIPClientTransaction)currentTransaction).addTransactionStateListener(dialog);
+                    // Add ourselves as a listener to this transaction so we
+                    // can process the next item from the queue once the
+                    // transaction has moved into the completed or terminated
+                    // state.
+                    ((SIPClientTransaction)currentTransaction).addTransactionStateListener(SIPDialog.this);
                     doSendRequest(currentTransaction,
                                   !SIPDialog.this.isBackToBackUserAgent);
                 }
@@ -4530,21 +4536,15 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
             catch (TransactionDoesNotExistException ex)
             {
                 logger.logError("Asked to process a transaction that does not exist any more", ex);
-                synchronized (this)
-                {
-                    // Notify this thread so it continues processing
-                    notify();
-                }
+                return false;
             }
             catch (SipException ex)
             {
                 logger.logError("Processing transaction failed", ex);
-                synchronized (this)
-                {
-                    // Notify this thread so it continues processing
-                    notify();
-                }
+                return false;
             }
+
+            return true;
         }
     }
 }
