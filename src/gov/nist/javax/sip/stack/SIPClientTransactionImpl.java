@@ -433,7 +433,14 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
           if (!isReliable()) {
             enableRetransmissionTimer();
           }
-          if (isInviteTransaction() || isRegisterTransaction()) {
+          if (isInviteTransaction() || isRegisterTransaction())
+          {
+            // INVITE and REGISTER transactions use a shorter timeout than
+            // other transactions. This is because a wait of 32s leads to a bad
+            // UX when:
+            //  * a proxy is not responding when the client starts
+            //  * the connection has gone down and the user is trying to make a
+            //    call.
             enableTimeoutTimer(TIMER_B);
           }
           else {
