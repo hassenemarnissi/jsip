@@ -4480,6 +4480,15 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
                     }
                 }
 
+                // Check that the transaction has not completed before blocking
+                // this thread
+                if (currentTransaction == null ||
+                    currentTransaction.getState().equals(TransactionState.COMPLETED) ||
+                    currentTransaction.getState().equals(TransactionState.TERMINATED))
+                {
+                    continue;
+                }
+
                 synchronized (this)
                 {
                     try
@@ -4514,6 +4523,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
             catch (InterruptedException ex)
             {
                 logger.logError("Interrupted while taking a job from the client transaction queue", ex);
+                currentTransaction = null;
                 // Return an error so the thread can immediately process
                 // the next work item from the queue.
                 return false;
