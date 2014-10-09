@@ -942,7 +942,8 @@ public class SIPClientTransactionImpl extends SIPTransactionImpl implements SIPC
 
     // If this transaction has a dialog then send the request through that. The
     // dialog has a queue which ensures we do not send overlapping transactions.
-    if (getDialog() != null)
+    // Note that CANCEL requests must not be sent within a dialog
+    if (getDialog() != null && !getMethod().equals(Request.CANCEL))
     {
         getDialog().sendRequest(this);
         return;

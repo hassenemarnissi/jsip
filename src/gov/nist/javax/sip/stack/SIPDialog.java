@@ -4483,8 +4483,8 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
         // continue processing transactions from the queue.
         if (transaction.equals(currentTransaction))
         {
-            if (newState == TransactionState._COMPLETED ||
-                newState == TransactionState._TERMINATED)
+            if (TransactionState._COMPLETED == newState ||
+                TransactionState._TERMINATED == newState)
             {
                 synchronized (requestSender)
                 {
@@ -4552,8 +4552,8 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
                 }
                 // If the current transaction has completed or been terminated,
                 // we can continue processing.
-                else if (currentTransaction.getState().equals(TransactionState.COMPLETED) ||
-                         currentTransaction.getState().equals(TransactionState.TERMINATED))
+                else if (TransactionState.COMPLETED.equals(currentTransaction.getState()) ||
+                        TransactionState.TERMINATED.equals(currentTransaction.getState()))
                 {
                     if (!processNextTransaction())
                     {
@@ -4564,8 +4564,8 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
                 // Check that the transaction has not completed before blocking
                 // this thread
                 if (currentTransaction == null ||
-                    currentTransaction.getState().equals(TransactionState.COMPLETED) ||
-                    currentTransaction.getState().equals(TransactionState.TERMINATED))
+                    TransactionState.COMPLETED.equals(currentTransaction.getState()) ||
+                    TransactionState.TERMINATED.equals(currentTransaction.getState()))
                 {
                     continue;
                 }
