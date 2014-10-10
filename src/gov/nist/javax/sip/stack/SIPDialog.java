@@ -276,7 +276,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
 	 * queue and transmitting them. This is a separate thread as it blocks
      * while there is no work to do.
 	 */
-	private final RequestSenderThread requestSender =
+	private RequestSenderThread requestSender =
 	                 new RequestSenderThread();
 
     /**
@@ -4371,7 +4371,13 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
             // Clear up the client transaction queue and kill the request
             // sender thread
             clientTransactionQueue.clear();
-            requestSender.disable();
+            if (requestSender != null)
+            {
+                requestSender.disable();
+
+                // Dereference the request sender thread for garbage collection
+                requestSender = null;
+            }
         }
     }
 
@@ -4486,10 +4492,13 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
             if (TransactionState._COMPLETED == newState ||
                 TransactionState._TERMINATED == newState)
             {
-                synchronized (requestSender)
+                if (requestSender != null)
                 {
-                    requestSender.notify();
-                    ((SIPClientTransaction) currentTransaction).removeTransactionStateListener(this);
+                    synchronized (requestSender)
+                    {
+                        requestSender.notify();
+                        ((SIPClientTransaction) currentTransaction).removeTransactionStateListener(this);
+                    }
                 }
             }
         }
@@ -4523,12 +4532,11 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
         public void disable()
         {
             enabled = false;
-            clientTransactionQueue.notify();
             synchronized (this)
             {
                 // Interrupt the request sender thread so it can stop processing
                 // items from the queue.
-                requestSender.interrupt();
+                interrupt();
             }
         }
 
@@ -4584,6 +4592,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
                     }
                 }
             }
+            logger.logError("Completed running of request sender thread");
         }
 
         /**
@@ -4603,7 +4612,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
             }
             catch (InterruptedException ex)
             {
-                logger.logError("Interrupted while taking a job from the client transaction queue", ex);
+                logger.logDebug("Interrupted while taking a job from the client transaction queue");
                 currentTransaction = null;
                 // Return an error so the thread can immediately process
                 // the next work item from the queue.
