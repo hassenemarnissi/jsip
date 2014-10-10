@@ -4592,7 +4592,7 @@ public class SIPDialog implements javax.sip.Dialog, DialogExt, TransactionStateL
                     }
                 }
             }
-            logger.logError("Completed running of request sender thread");
+            logger.logDebug("Completed running of request sender thread");
         }
 
         /**
