@@ -2073,7 +2073,6 @@ public abstract class SIPTransactionStack implements
 
         if (this.timer != null)
         {
-            logger.logError("@NJB TIMER STOPPED!!!!!!!!");
             this.timer.stop();
         }
         try {
@@ -3174,11 +3173,12 @@ public abstract class SIPTransactionStack implements
 //            throw new IllegalArgumentException("The Stack reliableConnectionKeepAliveTimeout can not be negative. reliableConnectionKeepAliveTimeoutCandidate = " + reliableConnectionKeepAliveTimeout);
 //
 //        } else
-        logger.logError("@NJB setting reliable connection keepalive timeout " + reliableConnectionKeepAliveTimeout);
         if (reliableConnectionKeepAliveTimeout == 0){
 
-            logger.logError("Default value (840000 ms) will be used for reliableConnectionKeepAliveTimeout stack property");
-            reliableConnectionKeepAliveTimeout = 840000;
+        	if (logger.isLoggingEnabled(LogWriter.TRACE_INFO)) {
+                logger.logInfo("Default value (10000 ms) will be used for reliableConnectionKeepAliveTimeout stack property");
+        	}
+            reliableConnectionKeepAliveTimeout = 10000;
         }
         logger.logError("value " + reliableConnectionKeepAliveTimeout + " will be used for reliableConnectionKeepAliveTimeout stack property");
         this.reliableConnectionKeepAliveTimeout = reliableConnectionKeepAliveTimeout;
@@ -3210,7 +3210,6 @@ public abstract class SIPTransactionStack implements
                                        int peerPort, long keepAliveTimeout) {
 
         MessageProcessor processor = findMessageProcessor(myAddress, myPort, transport);
-        logger.logError("@NJB set keepalive timeout");
         if (processor == null || !(processor instanceof ConnectionOrientedMessageProcessor)) {
             return false;
         }

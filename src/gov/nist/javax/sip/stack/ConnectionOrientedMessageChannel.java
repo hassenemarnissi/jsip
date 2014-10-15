@@ -95,15 +95,18 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
     private long keepAliveTimeout;
 
     private Random randomNumberGenerator = new Random();
+    
     public ConnectionOrientedMessageChannel(SIPTransactionStack sipStack) {
     	this.sipStack = sipStack;
-    	this.keepAliveTimeout = sipStack.getReliableConnectionKeepAliveTimeout();
-    	logger.logError("@NJB Created new ConnectionOrientedMessageChannel " + keepAliveTimeout);
+        this.keepAliveTimeout = sipStack.getReliableConnectionKeepAliveTimeout();
     	if(keepAliveTimeout > 0) {
     		keepAliveSemaphore = new Semaphore(1);
     	}
 
     	setKeepAliveTimeout(keepAliveTimeout);
+    	
+    	// Start the keep alive process by scheduling a heartbeat
+    	rescheduleHeartbeat();
 	}
 
     /**
@@ -688,7 +691,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
      * @see gov.nist.javax.sip.parser.SIPMessageListener#sendSingleCLRF()
      */
 	public void sendSingleCLRF() throws Exception {
-	    logger.logError("@NJB send single crlf");
         lastKeepAliveReceivedTime = System.currentTimeMillis();
 
 		if(mySock != null && !mySock.isClosed()) {
@@ -719,8 +721,11 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 				return;
 			}
 	    	try {
-                logger.logError("~~~ cancelPingKeepAliveTimeoutTaskIfStarted for MessageChannel(key=" + key + "), clientAddress=" + peerAddress
+	    		if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
+	    		{
+	    			logger.logDebug("~~~ cancelPingKeepAliveTimeoutTaskIfStarted for MessageChannel(key=" + key + "), clientAddress=" + peerAddress
 	                        +  ", clientPort=" + peerPort+ ", timeout="+ keepAliveTimeout + ")");
+	    		}
 	    		sipStack.getTimer().cancel(pingKeepAliveTimeoutTask);
 
 	    		// If we have received a pong from the server then we need to
@@ -746,7 +751,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         }
 
         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
-            logger.logError("~~~ setKeepAliveTimeout for MessageChannel(key=" + key + "), clientAddress=" + peerAddress
+            logger.logDebug("~~~ setKeepAliveTimeout for MessageChannel(key=" + key + "), clientAddress=" + peerAddress
                     +  ", clientPort=" + peerPort+ ", timeout="+ keepAliveTimeout + ")");
         }
 
@@ -823,28 +828,32 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         try {
 			keepAliveSemaphore.acquire();
 		} catch (InterruptedException e) {
-			logger.logError("Couldn't acquire keepAliveSemaphore");
+			logger.logWarning("Couldn't acquire keepAliveSemaphore");
 			return;
 		}
 		try{
 	        if(pingKeepAliveTimeoutTask == null) {
 	        	pingKeepAliveTimeoutTask = new KeepAliveTimeoutTimerTask();
+	        	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
 	                methodLog.append(", scheduling pingKeepAliveTimeoutTask to execute after ");
 	                methodLog.append(keepAliveTimeout / 1000);
 	                methodLog.append(" seconds");
-	                logger.logError(methodLog.toString());
-	    	    boolean res = sipStack.getTimer().schedule(pingKeepAliveTimeoutTask, keepAliveTimeout);
-
-	    	    logger.logError("@NJB Scheduled " + res + " " + sipStack.getTimer().isStarted());
+	                logger.logDebug(methodLog.toString());
+	        	}
+	    	    sipStack.getTimer().schedule(pingKeepAliveTimeoutTask, keepAliveTimeout);
 	        } else {
-	                logger.logError("~~~ cancelPingKeepAliveTimeout for MessageChannel(key=" + key + "), clientAddress=" + peerAddress
+	        	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
+	                logger.logDebug("~~~ cancelPingKeepAliveTimeout for MessageChannel(key=" + key + "), clientAddress=" + peerAddress
 	                        +  ", clientPort=" + peerPort+ ", timeout="+ keepAliveTimeout + ")");
+	        	}
         		sipStack.getTimer().cancel(pingKeepAliveTimeoutTask);
         		pingKeepAliveTimeoutTask = new KeepAliveTimeoutTimerTask();
+        		if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
 	                methodLog.append(", scheduling pingKeepAliveTimeoutTask to execute after ");
 	                methodLog.append(keepAliveTimeout / 1000);
 	                methodLog.append(" seconds");
-	                logger.logError(methodLog.toString());
+	                logger.logDebug(methodLog.toString());
+        		}
         		sipStack.getTimer().schedule(pingKeepAliveTimeoutTask, keepAliveTimeout);
 	        }
 		} finally {
@@ -854,9 +863,11 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
     class KeepAliveTimeoutTimerTask extends SIPStackTimerTask {
 
         public void runTask() {
-            logger.logError(
+        	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
+        		logger.logDebug(
                         "~~~ Starting processing of KeepAliveTimeoutEvent( " + peerAddress.getHostAddress() + "," + peerPort + ")...");
-            close(true, true);
+        	}
+        	close(true, true);
             if(sipStack instanceof SipStackImpl) {
 	            for (Iterator<SipProviderImpl> it = ((SipStackImpl)sipStack).getSipProviders(); it.hasNext();) {
 	                SipProviderImpl nextProvider = (SipProviderImpl) it.next();
@@ -904,7 +915,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                         {
                             try
                             {
-                                logger.logError("Sending heartbeat to peer: " +
+                                logger.logError("@NJB Sending heartbeat to peer: " +
                                         peerAddress.getHostAddress() + ":" + peerPort);
 
                                 ((ListeningPointExt) listeningPoint).

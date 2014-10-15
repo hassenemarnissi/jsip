@@ -253,7 +253,6 @@ public class ListeningPointImpl implements javax.sip.ListeningPoint, gov.nist.ja
         	// RFC 5626 : schedule the keepaive timeout to make sure we receive a pong response and notify the app if not
         	ConnectionOrientedMessageChannel connectionOrientedMessageChannel = (ConnectionOrientedMessageChannel) messageChannel;
         	long keepaliveTimeout = connectionOrientedMessageChannel.getKeepAliveTimeout();
-        	logger.logError("@NJB ConnectionOrientedMessageChannel " + keepaliveTimeout);
         	if(keepaliveTimeout > 0) {
         		connectionOrientedMessageChannel.rescheduleKeepAliveTimeout(keepaliveTimeout);
         	}

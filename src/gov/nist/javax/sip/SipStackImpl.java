@@ -750,7 +750,6 @@ public class SipStackImpl extends SIPTransactionStack implements
 						ex);
 			}
 
-		logger.logError("@NJB about to set connection keepalive");
 		super.setReliableConnectionKeepAliveTimeout(1000 * Integer.parseInt(
 			        configurationProperties.getProperty("gov.nist.javax.sip.RELIABLE_CONNECTION_KEEP_ALIVE_TIMEOUT", "-1")));
 

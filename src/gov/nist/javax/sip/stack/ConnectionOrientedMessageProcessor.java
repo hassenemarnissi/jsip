@@ -147,7 +147,6 @@ public abstract class ConnectionOrientedMessageProcessor extends MessageProcesso
     }
 
     public boolean setKeepAliveTimeout(String peerAddress, int peerPort, long keepAliveTimeout) {
-        logger.logError("@NJB set keepalive timeout");
         validatePortInRange(peerPort);
 
         HostPort hostPort  = new HostPort();
