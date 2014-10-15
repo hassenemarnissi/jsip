@@ -26,35 +26,24 @@
 package gov.nist.javax.sip.stack;
 
 import gov.nist.core.*;
-import gov.nist.core.net.AddressResolver;
-import gov.nist.core.net.DefaultNetworkLayer;
-import gov.nist.core.net.NetworkLayer;
-import gov.nist.core.net.SecurityManagerProvider;
+import gov.nist.core.net.*;
 import gov.nist.javax.sip.*;
-import gov.nist.javax.sip.header.Event;
-import gov.nist.javax.sip.header.Via;
-import gov.nist.javax.sip.header.extensions.JoinHeader;
-import gov.nist.javax.sip.header.extensions.ReplacesHeader;
-import gov.nist.javax.sip.message.SIPMessage;
-import gov.nist.javax.sip.message.SIPRequest;
-import gov.nist.javax.sip.message.SIPResponse;
-import gov.nist.javax.sip.parser.MessageParserFactory;
-import gov.nist.javax.sip.stack.timers.SipTimer;
+import gov.nist.javax.sip.header.*;
+import gov.nist.javax.sip.header.extensions.*;
+import gov.nist.javax.sip.message.*;
+import gov.nist.javax.sip.parser.*;
+import gov.nist.javax.sip.stack.timers.*;
 
-import javax.sip.*;
-import javax.sip.address.Hop;
-import javax.sip.address.Router;
-import javax.sip.header.CallIdHeader;
-import javax.sip.header.EventHeader;
-import javax.sip.message.Request;
-import javax.sip.message.Response;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.SocketAddress;
-import java.net.UnknownHostException;
+import java.io.*;
+import java.net.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.*;
+
+import javax.sip.*;
+import javax.sip.address.*;
+import javax.sip.header.*;
+import javax.sip.message.*;
 
 /*
  * Jeff Keyser : architectural suggestions and contributions. Pierre De Rop and Thomas Froment :
@@ -303,7 +292,7 @@ public abstract class SIPTransactionStack implements
     // containers to defend against buggy clients (that do not
     // want to respond to requests).
     protected int maxListenerResponseTime;
-    
+
     //http://java.net/jira/browse/JSIP-420
     // Max time that an INVITE tx is allowed to live in the stack. Default is infinity
     protected int maxTxLifetimeInvite;
@@ -363,7 +352,7 @@ public abstract class SIPTransactionStack implements
     private boolean deliverTerminatedEventForAck = false;
 
     protected ClientAuthType clientAuth = ClientAuthType.Default;
-    
+
     // ThreadPool when parsed SIP messages are processed. Affects the case when many TCP calls use single socket.
     private int tcpPostParsingThreadPoolSize = 0;
 
@@ -379,13 +368,13 @@ public abstract class SIPTransactionStack implements
     public MessageParserFactory messageParserFactory;
     // factory used to create MessageProcessor objects
     public MessageProcessorFactory messageProcessorFactory;
-    
+
     public long nioSocketMaxIdleTime;
 
-    protected boolean aggressiveCleanup = false;
+    protected boolean aggressiveCleanup = true;
 
     public SIPMessageValve sipMessageValve;
-    
+
     public SIPEventInterceptor sipEventInterceptor;
 
     protected static Executor selfRoutingThreadpoolExecutor;
@@ -406,10 +395,15 @@ public abstract class SIPTransactionStack implements
      *  a value < 0 means that the RFC 5626 will not be triggered, as a default we don't enable it not to change existing apps behavior.
      */
     protected int reliableConnectionKeepAliveTimeout = -1;
-    
+
     private long sslHandshakeTimeout = -1;
-    
+
     private boolean sslRenegotiationEnabled = false;
+
+    /**
+     * The upper bound of the heartbeat timer (RFC5626 section 4.4.1)
+     */
+    private int heartbeatUpperBound = 120;
 
     private static class SameThreadExecutor implements Executor {
 
@@ -451,7 +445,6 @@ public abstract class SIPTransactionStack implements
                             "ReInviteSender", threadCount++));
         }
     });
-
     // / Timer to regularly ping the thread auditor (on behalf of the timer
     // thread)
     protected class PingTimer extends SIPStackTimerTask {
@@ -763,7 +756,7 @@ public abstract class SIPTransactionStack implements
             logger.logStackTrace();
         dialogTable.put(dialogId, dialog);
         putMergeDialog(dialog);
-        
+
         return dialog;
     }
 
@@ -873,22 +866,22 @@ public abstract class SIPTransactionStack implements
             SIPResponse sipResponse) {
         return new SIPDialog(sipProvider, sipResponse);
     }
-    
+
     /**
      * Creates a new dialog based on a received NOTIFY. The dialog state is
      * initialized appropriately. The NOTIFY differs in the From tag
-     * 
+     *
      * Made this a separate method to clearly distinguish what's happening here
      * - this is a non-trivial case
-     * 
+     *
      * @param subscribeTx
      *            - the transaction started with the SUBSCRIBE that we sent
      * @param notifyST
      *            - the ServerTransaction created for an incoming NOTIFY
      * @return -- a new dialog created from the subscribe original SUBSCRIBE
      *         transaction.
-     * 
-     * 
+     *
+     *
      */
     public SIPDialog createDialog(SIPClientTransaction subscribeTx, SIPTransaction notifyST) {
       return new SIPDialog(subscribeTx, notifyST);
@@ -969,13 +962,13 @@ public abstract class SIPTransactionStack implements
 			if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
 				logger.logDebug("Tyring to remove Dialog from serverDialogMerge table with Merge Dialog Id " + mergeId);
 			}
-			SIPDialog sipDialog = serverDialogMergeTestTable.remove(mergeId);		
+			SIPDialog sipDialog = serverDialogMergeTestTable.remove(mergeId);
 			if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG) && sipDialog != null) {
 				logger.logDebug("removed Dialog " + sipDialog + " from serverDialogMerge table with Merge Dialog Id " + mergeId);
 			}
 		}
 	}
-	
+
 	protected void putMergeDialog(SIPDialog sipDialog) {
 		if(sipDialog != null) {
 			String mergeId = sipDialog.getMergeId();
@@ -987,7 +980,7 @@ public abstract class SIPTransactionStack implements
 			}
 		}
 	}
-    
+
     /**
      * Return the dialog for a given dialog ID. If compatibility is enabled then
      * we do not assume the presence of tags and hence need to add a flag to
@@ -1411,7 +1404,7 @@ public abstract class SIPTransactionStack implements
         }
         // http://java.net/jira/browse/JSIP-429
         // get the merge id from the tx instead of the request to avoid reparsing on aggressive cleanup
-        String key = tr.getMergeId();        
+        String key = tr.getMergeId();
         if (key != null) {
             this.mergeTable.remove(key);
         }
@@ -1873,7 +1866,7 @@ public abstract class SIPTransactionStack implements
         				" mergetTable %d " +
         				" terminatedServerTransactionsPendingAck %d  " +
         				" forkedClientTransactionTable %d " +
-        				" pendingTransactions %d " , 
+        				" pendingTransactions %d " ,
         				clientTransactionTable.size(),
         				serverTransactionTable.size(),
         				mergeTable.size(),
@@ -1933,7 +1926,7 @@ public abstract class SIPTransactionStack implements
             String key = sipRequest.getTransactionId();
             existingTx = clientTransactionTable.putIfAbsent(key,
                     (SIPClientTransaction) sipTransaction);
-            
+
             if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
                 logger
                         .logDebug(" putTransactionHash : " + " key = " + key);
@@ -2053,7 +2046,7 @@ public abstract class SIPTransactionStack implements
      */
     public void stopStack() {
         // Prevent NPE on two concurrent stops
-        this.toExit = true;        
+        this.toExit = true;
 
         // JvB: set it to null, SIPDialog tries to schedule things after stop
         this.pendingTransactions.clear();
@@ -2063,7 +2056,7 @@ public abstract class SIPTransactionStack implements
         synchronized (this.clientTransactionTable) {
             clientTransactionTable.notifyAll();
         }
-        
+
         if(selfRoutingThreadpoolExecutor != null && selfRoutingThreadpoolExecutor instanceof ExecutorService) {
         	((ExecutorService)selfRoutingThreadpoolExecutor).shutdown();
         }
@@ -2079,7 +2072,10 @@ public abstract class SIPTransactionStack implements
         // Let the processing complete.
 
         if (this.timer != null)
+        {
+            logger.logError("@NJB TIMER STOPPED!!!!!!!!");
             this.timer.stop();
+        }
         try {
             Thread.sleep(1000);
         } catch (InterruptedException ex) {
@@ -2091,7 +2087,7 @@ public abstract class SIPTransactionStack implements
         this.serverLogger.closeLogFile();
 
     }
-    
+
     public void closeAllSockets() {
     	this.ioHandler.closeAll();
     	for(MessageProcessor p : messageProcessors) {
@@ -2825,10 +2821,10 @@ public abstract class SIPTransactionStack implements
         String cid = replacesHeader.getCallId();
         String fromTag = replacesHeader.getFromTag();
         String toTag = replacesHeader.getToTag();
-        
+
         for ( SIPDialog dialog : this.dialogTable.values() ) {
-            if ( dialog.getCallId().getCallId().equals(cid) 
-                    && fromTag.equalsIgnoreCase(dialog.lastResponseFromTag) 
+            if ( dialog.getCallId().getCallId().equals(cid)
+                    && fromTag.equalsIgnoreCase(dialog.lastResponseFromTag)
                     && toTag.equalsIgnoreCase(dialog.lastResponseToTag)) {
                 return dialog;
             }
@@ -2988,8 +2984,8 @@ public abstract class SIPTransactionStack implements
         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
         	logger.logStackTrace();
             logger.logDebug(
-                    "Adding forked client transaction : " + clientTransaction + " branch=" + clientTransaction.getBranch() + 
-                    " forkId = " + forkId + "  sipDialog = " + clientTransaction.getDefaultDialog() + 
+                    "Adding forked client transaction : " + clientTransaction + " branch=" + clientTransaction.getBranch() +
+                    " forkId = " + forkId + "  sipDialog = " + clientTransaction.getDefaultDialog() +
                     " sipDialogId= " + clientTransaction.getDefaultDialog().getDialogId());
     	}
 
@@ -3177,17 +3173,14 @@ public abstract class SIPTransactionStack implements
 //        if (reliableConnectionKeepAliveTimeout < 0){
 //            throw new IllegalArgumentException("The Stack reliableConnectionKeepAliveTimeout can not be negative. reliableConnectionKeepAliveTimeoutCandidate = " + reliableConnectionKeepAliveTimeout);
 //
-//        } else 
+//        } else
+        logger.logError("@NJB setting reliable connection keepalive timeout " + reliableConnectionKeepAliveTimeout);
         if (reliableConnectionKeepAliveTimeout == 0){
 
-            if (logger.isLoggingEnabled(LogWriter.TRACE_INFO)) {
-                logger.logInfo("Default value (840000 ms) will be used for reliableConnectionKeepAliveTimeout stack property");
-            }
+            logger.logError("Default value (840000 ms) will be used for reliableConnectionKeepAliveTimeout stack property");
             reliableConnectionKeepAliveTimeout = 840000;
         }
-        if (logger.isLoggingEnabled(LogWriter.TRACE_INFO)) {
-            logger.logInfo("value " + reliableConnectionKeepAliveTimeout + " will be used for reliableConnectionKeepAliveTimeout stack property");
-        }
+        logger.logError("value " + reliableConnectionKeepAliveTimeout + " will be used for reliableConnectionKeepAliveTimeout stack property");
         this.reliableConnectionKeepAliveTimeout = reliableConnectionKeepAliveTimeout;
     }
 
@@ -3217,7 +3210,7 @@ public abstract class SIPTransactionStack implements
                                        int peerPort, long keepAliveTimeout) {
 
         MessageProcessor processor = findMessageProcessor(myAddress, myPort, transport);
-
+        logger.logError("@NJB set keepalive timeout");
         if (processor == null || !(processor instanceof ConnectionOrientedMessageProcessor)) {
             return false;
         }
@@ -3304,7 +3297,7 @@ public abstract class SIPTransactionStack implements
 	public void setMaxTxLifetimeNonInvite(int maxTxLifetimeNonInvite) {
 		this.maxTxLifetimeNonInvite = maxTxLifetimeNonInvite;
 	}
-	
+
 	public boolean isSslRenegotiationEnabled() {
 		return sslRenegotiationEnabled;
 	}
@@ -3312,4 +3305,26 @@ public abstract class SIPTransactionStack implements
 	public void setSslRenegotiationEnabled(boolean sslRenegotiationEnabled) {
 		this.sslRenegotiationEnabled = sslRenegotiationEnabled;
 	}
+
+	/**
+	 * Get the lower bound of the heartbeat timer. RFC 5626 section 4.4.1 defines
+     * this as 20% less than the upper bound.
+	 */
+    public int getHeartbeatLowerBound()
+    {
+        return (int) Math.floor((double)heartbeatUpperBound * 0.8);
+    }
+
+    /**
+     * Get the upper bound of the heartbeat timer
+     */
+    public int getHeartbeatUpperBound()
+    {
+        return heartbeatUpperBound;
+    }
+
+    public void setHeartbeatUpperBound(int upperBound)
+    {
+        heartbeatUpperBound = upperBound;
+    }
 }

@@ -206,7 +206,7 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
     		}
     	}
         if(stopKeepAliveTask) {
-			cancelPingKeepAliveTimeoutTaskIfStarted();
+			cancelPingKeepAliveTimeoutTaskIfStarted(false);
 		}	    	        
     }    
 

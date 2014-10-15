@@ -25,26 +25,18 @@
 */
 package gov.nist.javax.sip;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.text.ParseException;
+import gov.nist.core.*;
+import gov.nist.javax.sip.address.*;
+import gov.nist.javax.sip.header.*;
+import gov.nist.javax.sip.message.*;
+import gov.nist.javax.sip.stack.*;
+
+import java.io.*;
+import java.text.*;
 
 import javax.sip.*;
-import javax.sip.address.SipURI;
-import javax.sip.header.ContactHeader;
-import javax.sip.header.ViaHeader;
-
-import gov.nist.core.CommonLogger;
-import gov.nist.core.Host;
-import gov.nist.core.HostPort;
-import gov.nist.core.InternalErrorHandler;
-import gov.nist.core.StackLogger;
-import gov.nist.javax.sip.address.AddressImpl;
-import gov.nist.javax.sip.address.SipUri;
-import gov.nist.javax.sip.header.Contact;
-import gov.nist.javax.sip.header.Via;
-import gov.nist.javax.sip.message.SIPRequest;
-import gov.nist.javax.sip.stack.*;
+import javax.sip.address.*;
+import javax.sip.header.*;
 
 /**
  * Implementation of the ListeningPoint interface
@@ -236,7 +228,7 @@ public class ListeningPointImpl implements javax.sip.ListeningPoint, gov.nist.ja
             AddressImpl address = new AddressImpl();
             address.setURI(sipURI);
             contact.setAddress(address);
-            
+
             return contact;
         } catch (Exception ex) {
             InternalErrorHandler.handleException("Unexpected exception",logger);
@@ -247,6 +239,7 @@ public class ListeningPointImpl implements javax.sip.ListeningPoint, gov.nist.ja
 
     public void sendHeartbeat(String ipAddress, int port) throws IOException {
 
+        logger.logError("@NJB Sending heartbeat " + sipStack.isAlive());
     	if(!sipStack.isAlive())
     		return;
         HostPort targetHostPort  = new HostPort();
@@ -255,20 +248,21 @@ public class ListeningPointImpl implements javax.sip.ListeningPoint, gov.nist.ja
         MessageChannel messageChannel = this.messageProcessor.createMessageChannel(targetHostPort);
         SIPRequest siprequest = new SIPRequest();
         siprequest.setNullRequest();
-        
+
         if(messageChannel instanceof ConnectionOrientedMessageChannel) {
         	// RFC 5626 : schedule the keepaive timeout to make sure we receive a pong response and notify the app if not
         	ConnectionOrientedMessageChannel connectionOrientedMessageChannel = (ConnectionOrientedMessageChannel) messageChannel;
         	long keepaliveTimeout = connectionOrientedMessageChannel.getKeepAliveTimeout();
+        	logger.logError("@NJB ConnectionOrientedMessageChannel " + keepaliveTimeout);
         	if(keepaliveTimeout > 0) {
         		connectionOrientedMessageChannel.rescheduleKeepAliveTimeout(keepaliveTimeout);
         	}
-        }        
+        }
         messageChannel.sendMessage(siprequest);
 
     }
 
-    
+
     public ViaHeader createViaHeader() {
            return this.getViaHeader();
     }

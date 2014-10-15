@@ -25,38 +25,23 @@
  */
 package gov.nist.javax.sip.stack;
 
-import gov.nist.core.CommonLogger;
-import gov.nist.core.InternalErrorHandler;
-import gov.nist.core.LogWriter;
-import gov.nist.core.ServerLogger;
-import gov.nist.core.StackLogger;
-import gov.nist.javax.sip.IOExceptionEventExt;
+import gov.nist.core.*;
+import gov.nist.javax.sip.*;
 import gov.nist.javax.sip.IOExceptionEventExt.Reason;
-import gov.nist.javax.sip.SipListenerExt;
-import gov.nist.javax.sip.SipProviderImpl;
-import gov.nist.javax.sip.SipStackImpl;
-import gov.nist.javax.sip.header.RetryAfter;
-import gov.nist.javax.sip.header.Via;
-import gov.nist.javax.sip.header.ViaList;
-import gov.nist.javax.sip.message.SIPMessage;
-import gov.nist.javax.sip.message.SIPRequest;
-import gov.nist.javax.sip.message.SIPResponse;
-import gov.nist.javax.sip.parser.Pipeline;
-import gov.nist.javax.sip.parser.PipelinedMsgParser;
-import gov.nist.javax.sip.parser.SIPMessageListener;
+import gov.nist.javax.sip.header.*;
+import gov.nist.javax.sip.message.*;
+import gov.nist.javax.sip.parser.*;
+import gov.nist.javax.sip.stack.timers.*;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.text.ParseException;
-import java.util.Iterator;
-import java.util.concurrent.Semaphore;
+import java.io.*;
+import java.net.*;
+import java.text.*;
+import java.util.*;
+import java.util.concurrent.*;
 
-import javax.sip.ListeningPoint;
-import javax.sip.SipListener;
-import javax.sip.address.Hop;
-import javax.sip.message.Response;
+import javax.sip.*;
+import javax.sip.address.*;
+import javax.sip.message.*;
 
 /**
  * @author jean.deruelle@gmail.com
@@ -64,70 +49,79 @@ import javax.sip.message.Response;
  */
 public abstract class ConnectionOrientedMessageChannel extends MessageChannel implements
 	SIPMessageListener, Runnable, RawMessageChannel {
-	
+
 	private static StackLogger logger = CommonLogger.getLogger(ConnectionOrientedMessageChannel.class);
 	protected SIPTransactionStack sipStack;
-	
+
 	protected Socket mySock;
-	
+
 	protected PipelinedMsgParser myParser;
-	
+
 	protected String key;
-	
+
 	protected InputStream myClientInputStream; // just to pass to thread.
 
 	// Set here on initialization to avoid thread leak. See issue 266
 	protected boolean isRunning = true;
-	
+
 	protected boolean isCached;
 
-    protected Thread mythread;    
+    protected Thread mythread;
 
     protected String myAddress;
 
     protected int myPort;
 
     protected InetAddress peerAddress;
-    
+
     // This is the port and adress that we will find in the headers of the messages from the peer
     protected int peerPortAdvertisedInHeaders = -1;
     protected String peerAddressAdvertisedInHeaders;
-    
+
     protected int peerPort;
 
     protected String peerProtocol;
-	
+
 	private volatile long lastKeepAliveReceivedTime;
 
     private SIPStackTimerTask pingKeepAliveTimeoutTask;
     private Semaphore keepAliveSemaphore;
-    
-    private long keepAliveTimeout;    
-    
+
+    /**
+     * The Timer Task responsible for sending heartbeats to the server
+     */
+    private SIPStackTimerTask sendHeartbeatTimerTask;
+
+    private long keepAliveTimeout;
+
+    private Random randomNumberGenerator = new Random();
     public ConnectionOrientedMessageChannel(SIPTransactionStack sipStack) {
     	this.sipStack = sipStack;
     	this.keepAliveTimeout = sipStack.getReliableConnectionKeepAliveTimeout();
+    	logger.logError("@NJB Created new ConnectionOrientedMessageChannel " + keepAliveTimeout);
     	if(keepAliveTimeout > 0) {
     		keepAliveSemaphore = new Semaphore(1);
     	}
+
+    	setKeepAliveTimeout(keepAliveTimeout);
 	}
-    
+
     /**
      * Returns "true" as this is a reliable transport.
      */
     public boolean isReliable() {
         return true;
     }
-    
+
     /**
      * Close the message channel.
      */
     public void close() {
     	close(true, true);
     }
-    
+
     protected abstract void close(boolean removeSocket, boolean stopKeepAliveTask);
-    
+
 	/**
      * Get my SIP Stack.
      *
@@ -136,7 +130,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
     public SIPTransactionStack getSIPStack() {
         return sipStack;
     }
-    
+
     /**
      * get the address of the client that sent the data to us.
      *
@@ -157,7 +151,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
     public String getPeerProtocol() {
         return this.peerProtocol;
     }
-    
+
     /**
      * Return a formatted message to the client. We try to re-connect with the
      * peer on the other end if possible.
@@ -211,15 +205,15 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         byte[] msg = sipMessage.encodeAsBytes(this.getTransport());
 
         long time = System.currentTimeMillis();
-        
+
         // need to store the peerPortAdvertisedInHeaders in case the response has an rport (ephemeral) that failed to retry on the regular via port
         // for responses, no need to store anything for subsequent requests.
         if(peerPortAdvertisedInHeaders <= 0) {
         	if(sipMessage instanceof SIPResponse) {
-        		SIPResponse sipResponse = (SIPResponse) sipMessage; 
+        		SIPResponse sipResponse = (SIPResponse) sipMessage;
         		Via via = sipResponse.getTopmostVia();
         		if(via.getRPort() > 0) {
-	            	if(via.getPort() <=0) {    
+	            	if(via.getPort() <=0) {
 	            		// if port is 0 we assume the default port for TCP
 	            		this.peerPortAdvertisedInHeaders = 5060;
 	            	} else {
@@ -227,7 +221,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 	            	}
 	            	if(logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
 	                	logger.logDebug("1.Storing peerPortAdvertisedInHeaders = " + peerPortAdvertisedInHeaders + " for via port = " + via.getPort() + " via rport = " + via.getRPort() + " and peer port = " + peerPort + " for this channel " + this + " key " + key);
-	                }	 
+	                }
         		}
         	}
         }
@@ -249,7 +243,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
     }
 
 	protected abstract void sendMessage(byte[] msg, boolean b) throws IOException;
-	
+
 	public void processMessage(SIPMessage sipMessage, InetAddress address) {
         this.peerAddress = address;
         try {
@@ -262,7 +256,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
             }
         }
     }
-	
+
 	 /**
      * Gets invoked by the parser as a callback on successful message parsing
      * (i.e. no parser errors).
@@ -287,12 +281,12 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                 }
                 return;
             }
-        	
+
             sipMessage.setRemoteAddress(this.peerAddress);
             sipMessage.setRemotePort(this.getPeerPort());
             sipMessage.setLocalAddress(this.getMessageProcessor().getIpAddress());
             sipMessage.setLocalPort(this.getPort());
-            
+
             ViaList viaList = sipMessage.getViaHeaders();
             // For a request
             // first via header tells where the message is coming from.
@@ -307,8 +301,8 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                 	int hopPort = v.getPort();
                 	if(logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
                     	logger.logDebug("hop port = " + hopPort + " for request " + sipMessage + " for this channel " + this + " key " + key);
-                    }                	
-                	if(hopPort <= 0) {    
+                    }
+                	if(hopPort <= 0) {
                 		// if port is 0 we assume the default port for TCP
                 		this.peerPortAdvertisedInHeaders = 5060;
                 	} else {
@@ -325,7 +319,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                     	logger.logDebug("3.Storing peerAddressAdvertisedInHeaders = " + peerAddressAdvertisedInHeaders + " for this channel " + this + " key " + key);
                     }
                 }
-                
+
                 try {
                 	if (mySock != null) { // selfrouting makes socket = null
                         				 // https://jain-sip.dev.java.net/issues/show_bug.cgi?id=297
@@ -337,7 +331,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                 	}
                     // Check to see if the received parameter matches
                 	// the peer address and tag it appropriately.
-                	
+
                     // JvB: dont do this. It is both costly and incorrect
                     // Must set received also when it is a FQDN, regardless
                     // whether
@@ -445,7 +439,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                 // maybe not enough resources.
                 ServerRequestInterface sipServerRequest = sipStack
                         .newSIPServerRequest(sipRequest, this);
-                
+
                 if (sipServerRequest != null) {
                     try {
                         sipServerRequest.processRequest(sipRequest, this);
@@ -542,9 +536,9 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         } finally {
         }
     }
-    
-    
-  
+
+
+
 
     /**
      * This gets invoked when thread.start is called from the constructor.
@@ -586,8 +580,8 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                         } catch (IOException ioex) {
                         }
                         return;
-                    }                    
-                    
+                    }
+
                     hispipe.write(msg, 0, nbytes);
 
                 } catch (IOException ex) {
@@ -633,13 +627,13 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 
     }
 
-    
+
     protected void uncache() {
         if (isCached && !isRunning) {
         	((ConnectionOrientedMessageProcessor)this.messageProcessor).remove(this);
         }
     }
-    
+
     /**
      * Get an identifying key. This key is used to cache the connection and
      * re-use it if necessary.
@@ -688,12 +682,13 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
     public InetAddress getPeerPacketSourceAddress() {
         return this.peerAddress;
     }
-    
+
 	/*
      * (non-Javadoc)
      * @see gov.nist.javax.sip.parser.SIPMessageListener#sendSingleCLRF()
      */
 	public void sendSingleCLRF() throws Exception {
+	    logger.logError("@NJB send single crlf");
         lastKeepAliveReceivedTime = System.currentTimeMillis();
 
 		if(mySock != null && !mySock.isClosed()) {
@@ -704,12 +699,18 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
             if (isRunning) {
             	if(keepAliveTimeout > 0) {
             		rescheduleKeepAliveTimeout(keepAliveTimeout);
-            	}             
+            	}
             }
         }
     }
 
-    public void cancelPingKeepAliveTimeoutTaskIfStarted() {
+	/**
+	 * Cancels the ping keepalive timeout
+	 *
+	 * @param pongReceived whether we are cancelling because we received a Pong
+     *                     from the server
+	 */
+    public void cancelPingKeepAliveTimeoutTaskIfStarted(boolean pongReceived) {
     	if(pingKeepAliveTimeoutTask != null && pingKeepAliveTimeoutTask.getSipTimerTask() != null) {
     		try {
 				keepAliveSemaphore.acquire();
@@ -718,11 +719,17 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 				return;
 			}
 	    	try {
-	    		if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
-	                logger.logDebug("~~~ cancelPingKeepAliveTimeoutTaskIfStarted for MessageChannel(key=" + key + "), clientAddress=" + peerAddress
+                logger.logError("~~~ cancelPingKeepAliveTimeoutTaskIfStarted for MessageChannel(key=" + key + "), clientAddress=" + peerAddress
 	                        +  ", clientPort=" + peerPort+ ", timeout="+ keepAliveTimeout + ")");
-	            }
 	    		sipStack.getTimer().cancel(pingKeepAliveTimeoutTask);
+
+	    		// If we have received a pong from the server then we need to
+                // the ping
+	    		if (pongReceived)
+	    		{
+	    		    logger.logError("@NJB received server pong");
+	    		    rescheduleHeartbeat();
+	    		}
 	    	} finally {
 	    		keepAliveSemaphore.release();
 	    	}
@@ -730,15 +737,16 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
     }
 
     public void setKeepAliveTimeout(long keepAliveTimeout) {
+        logger.logError("@NJB set keepalive timeout");
         if (keepAliveTimeout < 0){
-            cancelPingKeepAliveTimeoutTaskIfStarted();
+            cancelPingKeepAliveTimeoutTaskIfStarted(false);
         }
         if (keepAliveTimeout == 0){
             keepAliveTimeout = messageProcessor.getSIPStack().getReliableConnectionKeepAliveTimeout();
         }
 
         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
-            logger.logDebug("~~~ setKeepAliveTimeout for MessageChannel(key=" + key + "), clientAddress=" + peerAddress
+            logger.logError("~~~ setKeepAliveTimeout for MessageChannel(key=" + key + "), clientAddress=" + peerAddress
                     +  ", clientPort=" + peerPort+ ", timeout="+ keepAliveTimeout + ")");
         }
 
@@ -752,20 +760,53 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
             rescheduleKeepAliveTimeout(keepAliveTimeout);
         }
     }
-    
+
     public long getKeepAliveTimeout() {
     	return keepAliveTimeout;
     }
 
+    /**
+     * Schedules a heartbeat to occur at some point in the future. The time is
+     * chosen randomly between the upper and lower bounds defined in the SIP
+     * stack properties (recommendations are given in RFC5626 section 4.4.1)
+     */
+    private void rescheduleHeartbeat()
+    {
+        SipTimer sipStackTimer = sipStack.getTimer();
+
+        // We can't reschedule if we don't have a timer
+        if (sipStackTimer == null)
+            return;
+
+        int lowerBound = getSIPStack().getHeartbeatLowerBound();
+        int upperBound = getSIPStack().getHeartbeatUpperBound();
+
+        int heartbeatDelay = randomNumberGenerator.nextInt((upperBound - lowerBound) + 1) + lowerBound;
+
+        if (sendHeartbeatTimerTask == null)
+        {
+            sendHeartbeatTimerTask = new SendHeartbeatTimerTask();
+        }
+
+        // Cancel the existing task for safety
+        if (sendHeartbeatTimerTask.getSipTimerTask() != null)
+            sipStackTimer.cancel(sendHeartbeatTimerTask);
+
+        logger.logError("@NJB  Scheduling heartbeat in " + heartbeatDelay + "s");
+
+        sipStackTimer.schedule(sendHeartbeatTimerTask, heartbeatDelay*1000);
+    }
+
     public void rescheduleKeepAliveTimeout(long newKeepAliveTimeout) {
-//        long now = System.currentTimeMillis();
-//        long lastKeepAliveReceivedTimeOrNow = lastKeepAliveReceivedTime == 0 ? now : lastKeepAliveReceivedTime;
-//
-//        long newScheduledTime =  lastKeepAliveReceivedTimeOrNow + newKeepAliveTimeout;
+        long now = System.currentTimeMillis();
+        long lastKeepAliveReceivedTimeOrNow = lastKeepAliveReceivedTime == 0 ? now : lastKeepAliveReceivedTime;
+
+        long newScheduledTime =  lastKeepAliveReceivedTimeOrNow + newKeepAliveTimeout;
+
+        logger.logError("NJB rescheduling keepalive timeout");
 
         StringBuilder methodLog = new StringBuilder();
 
-        if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
             methodLog.append("~~~ rescheduleKeepAliveTimeout for MessageChannel(key=" + key + "), clientAddress=" + peerAddress
                     +  ", clientPort=" + peerPort+ ", timeout="+ keepAliveTimeout + "): newKeepAliveTimeout=");
             if (newKeepAliveTimeout == Long.MAX_VALUE) {
@@ -773,42 +814,37 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
             } else {
                 methodLog.append(newKeepAliveTimeout);
             }
-//            methodLog.append(", lastKeepAliveReceivedTimeOrNow=");
-//            methodLog.append(lastKeepAliveReceivedTimeOrNow);
-//            methodLog.append(", newScheduledTime=");
-//            methodLog.append(newScheduledTime);
-        }
+            methodLog.append(", lastKeepAliveReceivedTimeOrNow=");
+            methodLog.append(lastKeepAliveReceivedTimeOrNow);
+            methodLog.append(", newScheduledTime=");
+            methodLog.append(newScheduledTime);
 
-//        long delay = newScheduledTime > now ? newScheduledTime - now : 1;
+        long delay = newScheduledTime > now ? newScheduledTime - now : 1;
         try {
 			keepAliveSemaphore.acquire();
 		} catch (InterruptedException e) {
-			logger.logWarning("Couldn't acquire keepAliveSemaphore");
+			logger.logError("Couldn't acquire keepAliveSemaphore");
 			return;
 		}
 		try{
 	        if(pingKeepAliveTimeoutTask == null) {
-	        	pingKeepAliveTimeoutTask = new KeepAliveTimeoutTimerTask();	  	        	
-	        	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
+	        	pingKeepAliveTimeoutTask = new KeepAliveTimeoutTimerTask();
 	                methodLog.append(", scheduling pingKeepAliveTimeoutTask to execute after ");
 	                methodLog.append(keepAliveTimeout / 1000);
 	                methodLog.append(" seconds");
-	                logger.logDebug(methodLog.toString());
-	            }
-	    	    sipStack.getTimer().schedule(pingKeepAliveTimeoutTask, keepAliveTimeout);
+	                logger.logError(methodLog.toString());
+	    	    boolean res = sipStack.getTimer().schedule(pingKeepAliveTimeoutTask, keepAliveTimeout);
+
+	    	    logger.logError("@NJB Scheduled " + res + " " + sipStack.getTimer().isStarted());
 	        } else {
-	        	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
-	                logger.logDebug("~~~ cancelPingKeepAliveTimeout for MessageChannel(key=" + key + "), clientAddress=" + peerAddress
+	                logger.logError("~~~ cancelPingKeepAliveTimeout for MessageChannel(key=" + key + "), clientAddress=" + peerAddress
 	                        +  ", clientPort=" + peerPort+ ", timeout="+ keepAliveTimeout + ")");
-	        	}
-        		sipStack.getTimer().cancel(pingKeepAliveTimeoutTask);        	
+        		sipStack.getTimer().cancel(pingKeepAliveTimeoutTask);
         		pingKeepAliveTimeoutTask = new KeepAliveTimeoutTimerTask();
-        		if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
 	                methodLog.append(", scheduling pingKeepAliveTimeoutTask to execute after ");
 	                methodLog.append(keepAliveTimeout / 1000);
 	                methodLog.append(" seconds");
-	                logger.logDebug(methodLog.toString());
-	            }
+	                logger.logError(methodLog.toString());
         		sipStack.getTimer().schedule(pingKeepAliveTimeoutTask, keepAliveTimeout);
 	        }
 		} finally {
@@ -818,10 +854,8 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
     class KeepAliveTimeoutTimerTask extends SIPStackTimerTask {
 
         public void runTask() {
-            if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
-                logger.logDebug(
+            logger.logError(
                         "~~~ Starting processing of KeepAliveTimeoutEvent( " + peerAddress.getHostAddress() + "," + peerPort + ")...");
-            }
             close(true, true);
             if(sipStack instanceof SipStackImpl) {
 	            for (Iterator<SipProviderImpl> it = ((SipStackImpl)sipStack).getSipProviders(); it.hasNext();) {
@@ -830,20 +864,61 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 	                ListeningPoint[] listeningPoints = nextProvider.getListeningPoints();
 	                for(ListeningPoint listeningPoint : listeningPoints) {
 		            	if(sipListener!= null && sipListener instanceof SipListenerExt
-		            			// making sure that we don't notify each listening point but only the one on which the timeout happened  
-		            			&& listeningPoint.getIPAddress().equalsIgnoreCase(myAddress) && listeningPoint.getPort() == myPort && 
+		            			// making sure that we don't notify each listening point but only the one on which the timeout happened
+		            			&& listeningPoint.getIPAddress().equalsIgnoreCase(myAddress) && listeningPoint.getPort() == myPort &&
 		            				listeningPoint.getTransport().equalsIgnoreCase(getTransport())) {
 		            		((SipListenerExt)sipListener).processIOException(new IOExceptionEventExt(nextProvider, Reason.KeepAliveTimeout, myAddress, myPort,
 		            				peerAddress.getHostAddress(), peerPort, getTransport()));
 		                }
 	                }
-	            }  
+	            }
             } else {
-	            SipListener sipListener = sipStack.getSipListener();	            
+	            SipListener sipListener = sipStack.getSipListener();
 	            if(sipListener instanceof SipListenerExt) {
 	            	((SipListenerExt)sipListener).processIOException(new IOExceptionEventExt(this, Reason.KeepAliveTimeout, myAddress, myPort,
 	                    peerAddress.getHostAddress(), peerPort, getTransport()));
 	            }
+            }
+        }
+    }
+
+    /**
+     * Timer task that sends a heartbeat on all available listening points
+     */
+    class SendHeartbeatTimerTask extends SIPStackTimerTask
+    {
+        @Override
+        public void runTask()
+        {
+            if (sipStack instanceof SipStackImpl)
+            {
+                Iterator<SipProviderImpl> providers = ((SipStackImpl)sipStack).getSipProviders();
+                while (providers.hasNext())
+                {
+                    SipProviderImpl nextProvider = providers.next();
+                    ListeningPoint[] listeningPoints = nextProvider.getListeningPoints();
+
+                    for (ListeningPoint listeningPoint : listeningPoints)
+                    {
+                        if (listeningPoint instanceof ListeningPointExt)
+                        {
+                            try
+                            {
+                                logger.logError("Sending heartbeat to peer: " +
+                                        peerAddress.getHostAddress() + ":" + peerPort);
+
+                                ((ListeningPointExt) listeningPoint).
+                                            sendHeartbeat(peerAddress.getHostAddress(),
+                                                          peerPort);
+                            }
+                            catch (IOException ex)
+                            {
+                                logger.logWarning("Failed to send heartbeat to peer: " +
+                                        peerAddress.getHostAddress() + ":" + peerPort);
+                            }
+                        }
+                    }
+                }
             }
         }
     }

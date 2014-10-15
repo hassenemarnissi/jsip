@@ -28,40 +28,30 @@
  ******************************************************************************/
 package gov.nist.javax.sip.parser;
 
-import gov.nist.core.CommonLogger;
-import gov.nist.core.LogLevels;
-import gov.nist.core.LogWriter;
-import gov.nist.core.StackLogger;
-import gov.nist.javax.sip.message.SIPMessage;
-import gov.nist.javax.sip.stack.ConnectionOrientedMessageChannel;
-import gov.nist.javax.sip.stack.QueuedMessageDispatchBase;
-import gov.nist.javax.sip.stack.SIPTransactionStack;
+import gov.nist.core.*;
+import gov.nist.javax.sip.message.*;
+import gov.nist.javax.sip.stack.*;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.text.ParseException;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.Semaphore;
+import java.io.*;
+import java.text.*;
+import java.util.*;
+import java.util.concurrent.*;
 
-import javax.sip.header.CallIdHeader;
-import javax.sip.header.ContentLengthHeader;
+import javax.sip.header.*;
 
 /**
- * This is a FSM that can parse a single stream of messages with they bodies and 
+ * This is a FSM that can parse a single stream of messages with they bodies and
  * then pass the sip message to the listeners. It accumulates bytes until end of
  * message is detected or some DoS trigger terminates it due to excessive amount
  * of bytes per message or line.
- * 
+ *
  * Once parsed it will pass the message to the SIPMessageListener
  *
  * @see SIPMessageListener
  * @author vladimirralev
  */
 public class NioPipelineParser {
-	
+
 	private static StackLogger logger = CommonLogger.getLogger(NioPipelineParser.class);
 
 	private static final String CRLF = "\r\n";
@@ -82,17 +72,17 @@ public class NioPipelineParser {
 	boolean partialLineRead = false; // if we didn't receive enough bytes for a full line we expect the line to end in the next batch of bytes
 	String partialLine = "";
 	String callId;
-	
+
 	private ConcurrentHashMap<String, CallIDOrderingStructure> messagesOrderingMap = new ConcurrentHashMap<String, CallIDOrderingStructure>();
-	   
+
 	class CallIDOrderingStructure {
         private Semaphore semaphore;
         private Queue<UnparsedMessage> messagesForCallID;
-        
+
         public CallIDOrderingStructure() {
             semaphore = new Semaphore(1, true);
             messagesForCallID = new ConcurrentLinkedQueue<UnparsedMessage>();
-        }        
+        }
 
         /**
          * @return the semaphore
@@ -100,7 +90,7 @@ public class NioPipelineParser {
         public Semaphore getSemaphore() {
             return semaphore;
         }
-       
+
         /**
          * @return the messagesForCallID
          */
@@ -108,7 +98,7 @@ public class NioPipelineParser {
             return messagesForCallID;
         }
     }
-	
+
 	public static class UnparsedMessage {
 		String lines;
 		byte[] body;
@@ -116,12 +106,12 @@ public class NioPipelineParser {
 			this.lines = messageLines;
 			this.body = body;
 		}
-		
+
 		public String toString() {
 			return super.toString() + "\n" + lines;
 		}
 	}
-	
+
     public class Dispatch implements Runnable, QueuedMessageDispatchBase{
     	CallIDOrderingStructure callIDOrderingStructure;
     	String callId;
@@ -131,14 +121,14 @@ public class NioPipelineParser {
     		this.callId = callId;
     		time = System.currentTimeMillis();
     	}
-        public void run() {   
-        	
+        public void run() {
+
             // we acquire it in the thread to avoid blocking other messages with a different call id
-            // that could be processed in parallel                                    
+            // that could be processed in parallel
             Semaphore semaphore = callIDOrderingStructure.getSemaphore();
             final Queue<UnparsedMessage> messagesForCallID = callIDOrderingStructure.getMessagesForCallID();
-            try {                                                                                
-                semaphore.acquire();  
+            try {
+                semaphore.acquire();
                 if (logger.isLoggingEnabled(StackLogger.TRACE_DEBUG)) {
                 	logger.logDebug("semaphore acquired for message " + callId);
                 }
@@ -165,18 +155,18 @@ public class NioPipelineParser {
             if(sipStack.sipEventInterceptor != null) {
             	sipStack.sipEventInterceptor.beforeMessage(parsedSIPMessage);
             }
-            
+
             // once acquired we get the first message to process
             messagesForCallID.poll();
             SIPMessage message = parsedSIPMessage;
-            
-            
+
+
             try {
                 sipMessageListener.processMessage(message);
             } catch (Exception e) {
-            	logger.logError("Error occured processing message " + message, e);    
+            	logger.logError("Error occured processing message " + message, e);
                 // We do not break the TCP connection because other calls use the same socket here
-            } finally {                                        
+            } finally {
                 if(messagesForCallID.size() <= 0) {
                     messagesOrderingMap.remove(callId);
                     if (logger.isLoggingEnabled(StackLogger.TRACE_DEBUG)) {
@@ -188,7 +178,7 @@ public class NioPipelineParser {
                 }
                 //release the semaphore so that another thread can process another message from the call id queue in the correct order
                 // or a new message from another call id queue
-                semaphore.release(); 
+                semaphore.release();
                 if(messagesOrderingMap.isEmpty()) {
                     synchronized (messagesOrderingMap) {
                         messagesOrderingMap.notify();
@@ -206,16 +196,16 @@ public class NioPipelineParser {
 			return time;
 		}
     };
-	
+
 	public void close() {
-		
+
 	}
-	
+
 	StringBuffer message = new StringBuffer();
 	byte[] messageBody = null;
 	int contentLength = 0;
 	int contentReadSoFar = 0;
-	
+
 	/*
 	 *  This is where we receive the bytes from the stream and we analyze the through message structure.
 	 *  For TCP the key things to identify are message lines for the headers, parse the Content-Length header
@@ -235,7 +225,7 @@ public class NioPipelineParser {
 			}
 		}
 	}
-	
+
 	private boolean readMessageSipHeaderLines(InputStream inputStream, boolean isPreviousLineCRLF) throws IOException {
 		boolean crlfReceived = false;
 		String line = readLine(inputStream); // This gives us a full line or if it didn't fit in the byte check it may give us part of the line
@@ -255,7 +245,7 @@ public class NioPipelineParser {
 					callId = line.substring(
 							CallIdHeader.NAME.length()+1).trim();
 				}
-			} else {				
+			} else {
 				if(isPreviousLineCRLF) {
             		// Handling keepalive ping (double CRLF) as defined per RFC 5626 Section 4.4.1
                 	// sending pong (single CRLF)
@@ -268,17 +258,17 @@ public class NioPipelineParser {
 
                 	try {
 						sipMessageListener.sendSingleCLRF();
-					} catch (Exception e) {						
+					} catch (Exception e) {
 						logger.logError("A problem occured while trying to send a single CLRF in response to a double CLRF", e);
-					}                	                	
+					}
             	} else {
             		crlfReceived = true;
                 	if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG)) {
                     	logger.logDebug("Received CRLF");
                     }
-                	if(sipMessageListener != null && 
+                	if(sipMessageListener != null &&
                 			sipMessageListener instanceof ConnectionOrientedMessageChannel) {
-                		((ConnectionOrientedMessageChannel)sipMessageListener).cancelPingKeepAliveTimeoutTaskIfStarted();
+                		((ConnectionOrientedMessageChannel)sipMessageListener).cancelPingKeepAliveTimeoutTaskIfStarted(true);
                 	}
             	}
 				if(message.length() > 0) { // if we havent read any headers yet we are between messages and ignore CRLFs
@@ -293,7 +283,7 @@ public class NioPipelineParser {
 					contentReadSoFar = 0;
 					messageBody = new byte[contentLength];
 				}
-			}			
+			}
 		}
 		return crlfReceived;
 	}
@@ -317,8 +307,8 @@ public class NioPipelineParser {
 			message = new StringBuffer();
 			final byte[] msgBodyBytes = messageBody;
 			final int finalContentLength = contentLength;
-			
-			
+
+
 			if(PostParseExecutorServices.getPostParseExecutor() != null) {
 				final String callId = this.callId;
 				if(callId == null || callId.trim().length() < 1) {
@@ -332,18 +322,18 @@ public class NioPipelineParser {
                     CallIDOrderingStructure newCallIDOrderingStructure = new CallIDOrderingStructure();
                     orderingStructure = messagesOrderingMap.putIfAbsent(callId, newCallIDOrderingStructure);
                     if(orderingStructure == null) {
-                        orderingStructure = newCallIDOrderingStructure;       
+                        orderingStructure = newCallIDOrderingStructure;
                         if (logger.isLoggingEnabled(StackLogger.TRACE_DEBUG)) {
                             logger.logDebug("new CallIDOrderingStructure added for message " + message);
                         }
                     }
                 }
-                final CallIDOrderingStructure callIDOrderingStructure = orderingStructure;                                 
-                // we add the message to the pending queue of messages to be processed for that call id here 
+                final CallIDOrderingStructure callIDOrderingStructure = orderingStructure;
+                // we add the message to the pending queue of messages to be processed for that call id here
                 // to avoid blocking other messages with a different call id
                 // that could be processed in parallel
-                callIDOrderingStructure.getMessagesForCallID().offer(new UnparsedMessage(msgLines, msgBodyBytes));                                                                                   
-                
+                callIDOrderingStructure.getMessagesForCallID().offer(new UnparsedMessage(msgLines, msgBodyBytes));
+
                 PostParseExecutorServices.getPostParseExecutor().execute(new Dispatch(callIDOrderingStructure, callId)); // run in executor thread
 			} else {
 				SIPMessage sipMessage = null;
@@ -368,7 +358,7 @@ public class NioPipelineParser {
 			logger.logError("Can't process message", e);
 		}
 	}
-	
+
 	public synchronized void addBytes(byte[] bytes)  throws Exception{
 		currentStreamEnded = false;
 		ByteArrayInputStream inputStream = new ByteArrayInputStream(bytes);
@@ -376,12 +366,12 @@ public class NioPipelineParser {
 	}
 
 
-    
+
     /**
      * default constructor.
      */
     protected NioPipelineParser() {
-        super();        
+        super();
     }
 
     /**
@@ -434,20 +424,20 @@ public class NioPipelineParser {
     public void setMessageListener(SIPMessageListener mlistener) {
         sipMessageListener = mlistener;
     }
-    
+
 	private int readChunk(InputStream inputStream, byte[] where, int offset, int length) throws IOException {
 		int read =  inputStream.read(where, offset, length);
 		sizeCounter -= read;
 		checkLimits();
 		return read;
 	}
-	
+
 	private int readSingleByte(InputStream inputStream) throws IOException {
 		sizeCounter --;
 		checkLimits();
 		return inputStream.read();
 	}
-	
+
 	private void checkLimits() {
 		if(maxMessageSize > 0 && sizeCounter < 0) throw new RuntimeException("Max Message Size Exceeded " + maxMessageSize);
 	}
@@ -473,25 +463,25 @@ public class NioPipelineParser {
                 break;
             } else
                 ch = (char) ( i & 0xFF);
-            
+
             if (ch != '\r')
                 lineBuffer[counter++] = (byte) (i&0xFF);
-            else if (counter == 0)            	
+            else if (counter == 0)
             	crlfBuffer[crlfCounter++] = (byte) '\r';
-                       
+
             if (ch == '\n') {
             	if(counter == 1 && crlfCounter > 0) {
-            		crlfBuffer[crlfCounter++] = (byte) '\n';            		
-            	} 
-            	break;            	
+            		crlfBuffer[crlfCounter++] = (byte) '\n';
+            	}
+            	break;
             }
-            
+
             if( counter == bufferSize ) {
                 byte[] tempBuffer = new byte[bufferSize + increment];
                 System.arraycopy((Object)lineBuffer,0, (Object)tempBuffer, 0, bufferSize);
                 bufferSize = bufferSize + increment;
                 lineBuffer = tempBuffer;
-                
+
             }
         }
         if(counter == 1 && crlfCounter > 0) {
@@ -499,8 +489,8 @@ public class NioPipelineParser {
         } else {
         	return new String(lineBuffer,0,counter,"UTF-8");
         }
-        
+
     }
-    
+
 
 }

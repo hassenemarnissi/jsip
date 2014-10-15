@@ -205,7 +205,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
             }
         }
         if(stopKeepAliveTask) {
-			cancelPingKeepAliveTimeoutTaskIfStarted();
+			cancelPingKeepAliveTimeoutTaskIfStarted(false);
 		}
 
     }
