@@ -327,7 +327,6 @@ public final class PipelinedMsgParser implements Runnable {
 
                 String line1;
                 String line2 = null;
-                boolean isPreviousLineCRLF = false;
                 while (true) {
                     try {
                         line1 = readLine(inputStream);
@@ -338,24 +337,6 @@ public final class PipelinedMsgParser implements Runnable {
                             }
                             continue;
                         } else if(CRLF.equals(line1)) {
-                        	if(isPreviousLineCRLF) {
-                        		// Handling keepalive ping (double CRLF) as defined per RFC 5626 Section 4.4.1
-                            	// sending pong (single CRLF)
-                            	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
-                                    logger.logDebug("KeepAlive Double CRLF received, sending single CRLF as defined per RFC 5626 Section 4.4.1");
-                                    logger.logDebug("~~~ setting isPreviousLineCRLF=false");
-                                }
-
-                                isPreviousLineCRLF = false;
-
-                            	try {
-            						sipMessageListener.sendSingleCLRF();
-            					} catch (Exception e) {
-            						logger.logError("A problem occured while trying to send a single CLRF in response to a double CLRF", e);
-            					}
-                            	continue;
-                        	} else {
-	                        	isPreviousLineCRLF = true;
 	                        	if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG)) {
 	                            	logger.logDebug("Received CRLF");
 	                            }
@@ -363,7 +344,6 @@ public final class PipelinedMsgParser implements Runnable {
 	                        			sipMessageListener instanceof ConnectionOrientedMessageChannel) {
 	                        		((ConnectionOrientedMessageChannel)sipMessageListener).cancelPingKeepAliveTimeoutTaskIfStarted(true);
 	                        	}
-                        	}
                         	continue;
                         } else
                             break;

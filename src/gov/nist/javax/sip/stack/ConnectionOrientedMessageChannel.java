@@ -713,6 +713,9 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
      *                     from the server
 	 */
     public void cancelPingKeepAliveTimeoutTaskIfStarted(boolean pongReceived) {
+        if (pongReceived)
+            logger.logError("@NJB received server pong", new RuntimeException());
+
     	if(pingKeepAliveTimeoutTask != null && pingKeepAliveTimeoutTask.getSipTimerTask() != null) {
     		try {
 				keepAliveSemaphore.acquire();
@@ -732,7 +735,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                 // the ping
 	    		if (pongReceived)
 	    		{
-	    		    logger.logError("@NJB received server pong");
+
 	    		    rescheduleHeartbeat();
 	    		}
 	    	} finally {
@@ -911,8 +914,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 
                     // Only send to the listening point that matches our
                     // current transport
-                    logger.logError("@NJB listening point transport: " + listeningPoint.getTransport() +
-                                    " My transport: " + getTransport());
                     if (listeningPoint instanceof ListeningPointExt &&
                         listeningPoint.getTransport().equalsIgnoreCase(getTransport()))
                     {
@@ -922,6 +923,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                                     peerAddress.getHostAddress() + ":" + peerPort +
                                     " ListeningPoint: " + listeningPoint.getIPAddress() + " " + listeningPoint.getPort() + " " + listeningPoint.getTransport() + " " + listeningPoint.getSentBy());
 
+                            logger.logError("@NJB Sending heartbeat from port: " + myPort);
                             ((ListeningPointExt) listeningPoint).sendHeartbeat(
                                                    peerAddress.getHostAddress(),
                                                    peerPort);

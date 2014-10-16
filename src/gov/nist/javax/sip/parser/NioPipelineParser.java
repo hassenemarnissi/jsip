@@ -249,6 +249,7 @@ public class NioPipelineParser {
 				if(isPreviousLineCRLF) {
             		// Handling keepalive ping (double CRLF) as defined per RFC 5626 Section 4.4.1
                 	// sending pong (single CRLF)
+				    logger.logError("Received Double CRLF");
                 	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
                         logger.logDebug("KeepAlive Double CRLF received, sending single CRLF as defined per RFC 5626 Section 4.4.1");
                         logger.logDebug("~~~ setting isPreviousLineCRLF=false");
@@ -263,9 +264,9 @@ public class NioPipelineParser {
 					}
             	} else {
             		crlfReceived = true;
-                	if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG)) {
-                    	logger.logDebug("Received CRLF");
-                    }
+                	//if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG)) {
+                    	logger.logError("Received CRLF");
+                    //}
                 	if(sipMessageListener != null &&
                 			sipMessageListener instanceof ConnectionOrientedMessageChannel) {
                 		((ConnectionOrientedMessageChannel)sipMessageListener).cancelPingKeepAliveTimeoutTaskIfStarted(true);

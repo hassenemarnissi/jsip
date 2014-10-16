@@ -28,24 +28,13 @@
  ******************************************************************************/
 package gov.nist.javax.sip.stack;
 
-import gov.nist.core.CommonLogger;
-import gov.nist.core.LogWriter;
-import gov.nist.core.StackLogger;
-import gov.nist.javax.sip.header.CSeq;
-import gov.nist.javax.sip.header.CallID;
-import gov.nist.javax.sip.header.ContentLength;
-import gov.nist.javax.sip.header.From;
-import gov.nist.javax.sip.header.RequestLine;
-import gov.nist.javax.sip.header.StatusLine;
-import gov.nist.javax.sip.header.To;
-import gov.nist.javax.sip.header.Via;
-import gov.nist.javax.sip.message.SIPMessage;
+import gov.nist.core.*;
+import gov.nist.javax.sip.header.*;
+import gov.nist.javax.sip.message.*;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.InetAddress;
-import java.net.Socket;
-import java.text.ParseException;
+import java.io.*;
+import java.net.*;
+import java.text.*;
 
 /*
  * Ahmet Uyar <auyar@csit.fsu.edu>sent in a bug report for TCP operation of the JAIN sipStack.
@@ -71,7 +60,7 @@ import java.text.ParseException;
  * @version 1.2 $Revision: 1.83 $ $Date: 2010-12-02 22:44:53 $
  */
 public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
-    private static StackLogger logger = CommonLogger.getLogger(TCPMessageChannel.class);    
+    private static StackLogger logger = CommonLogger.getLogger(TCPMessageChannel.class);
 
     protected OutputStream myClientOutputStream;
 
@@ -136,7 +125,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
     protected TCPMessageChannel(InetAddress inetAddr, int port,
             SIPTransactionStack sipStack, TCPMessageProcessor messageProcessor)
             throws IOException {
-    	
+
     	super(sipStack);
         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
             logger.logDebug(
@@ -152,18 +141,18 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
         this.key = MessageChannel.getKey(peerAddress, peerPort, "TCP");
         super.messageProcessor = messageProcessor;
 
-    }    
+    }
 
     /**
      * Close the message channel.
      */
-    public void close(boolean removeSocket, boolean stopKeepAliveTask) {  
+    public void close(boolean removeSocket, boolean stopKeepAliveTask) {
         isRunning = false;
     	// we need to close everything because the socket may be closed by the other end
-    	// like in LB scenarios sending OPTIONS and killing the socket after it gets the response    	
+    	// like in LB scenarios sending OPTIONS and killing the socket after it gets the response
         if (mySock != null) {
         	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
-                logger.logDebug("Closing socket " + key);
+                logger.logError("Closing socket " + key, new RuntimeException());
         	try {
 	            mySock.close();
 	            mySock = null;
@@ -171,12 +160,12 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
                 if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
                     logger.logDebug("Error closing socket " + ex);
             }
-        }        
+        }
         if(myParser != null) {
         	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
                 logger.logDebug("Closing my parser " + myParser);
-            myParser.close();            
-        }  
+            myParser.close();
+        }
         // no need to close myClientInputStream since myParser.close() above will do it
         if(myClientOutputStream != null) {
         	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
@@ -187,8 +176,8 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
                 if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
                     logger.logDebug("Error closing client output stream" + ex);
             }
-        }   
-        if(removeSocket) {                  
+        }
+        if(removeSocket) {
 	        // remove the "tcp:" part of the key to cleanup the ioHandler hashmap
 	        String ioHandlerKey = key.substring(4);
 	        if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
@@ -217,7 +206,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
      */
     public String getTransport() {
         return "TCP";
-    }    
+    }
 
     /**
      * Send message to whoever is connected to us. Uses the topmost via address
@@ -232,7 +221,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
         if ( logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
             logger.logDebug("sendMessage isClient  = " + isClient);
         }
-       
+
         Socket sock = null;
         IOException problem = null;
         try {
@@ -243,7 +232,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
         	logger.logWarning("Failed to connect " + this.peerAddress + ":" + this.peerPort +" but trying the advertised port=" + this.peerPortAdvertisedInHeaders + " if it's different than the port we just failed on");
         }
         if(sock == null) { // http://java.net/jira/browse/JSIP-362 If we couldn't connect to the host, try the advertised host and port as failsafe
-        	if(peerAddressAdvertisedInHeaders  != null && peerPortAdvertisedInHeaders > 0) { 
+        	if(peerAddressAdvertisedInHeaders  != null && peerPortAdvertisedInHeaders > 0) {
                 if (logger.isLoggingEnabled(LogWriter.TRACE_WARN)) {
                     logger.logWarning("Couldn't connect to peerAddress = " + peerAddress + " peerPort = " + peerPort
                             + " key = " + key + " retrying on peerPortAdvertisedInHeaders "
@@ -251,7 +240,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
                 }
         		InetAddress address = InetAddress.getByName(peerAddressAdvertisedInHeaders);
                 sock = this.sipStack.ioHandler.sendBytes(this.messageProcessor.getIpAddress(),
-                		address, this.peerPortAdvertisedInHeaders, this.peerProtocol, msg, isClient, this);        		
+                		address, this.peerPortAdvertisedInHeaders, this.peerProtocol, msg, isClient, this);
         		this.peerPort = this.peerPortAdvertisedInHeaders;
         		this.peerAddress = address;
         		this.key = MessageChannel.getKey(peerAddress, peerPort, "TCP");
@@ -279,14 +268,14 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
 		             logger.logWarning(
 		            		 "Old socket local ip address " + mySock.getLocalSocketAddress());
 		             logger.logWarning(
-		            		 "Old socket remote ip address " + mySock.getRemoteSocketAddress());                         
+		            		 "Old socket remote ip address " + mySock.getRemoteSocketAddress());
 		             logger.logWarning(
 		            		 "New socket local ip address " + sock.getLocalSocketAddress());
 		             logger.logWarning(
 		            		 "New socket remote ip address " + sock.getRemoteSocketAddress());
        		 }
        		 close(false, false);
-       	}    
+       	}
        	if(problem == null) {
        		if(mySock != null) {
 	        		if(logger.isLoggingEnabled(LogWriter.TRACE_WARN)) {
@@ -328,12 +317,12 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
             int receiverPort, boolean retry) throws IOException {
         if (message == null || receiverAddress == null)
             throw new IllegalArgumentException("Null argument");
-        
+
         if(peerPortAdvertisedInHeaders <= 0) {
         	if(logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
             	logger.logDebug("receiver port = " + receiverPort + " for this channel " + this + " key " + key);
-            }        	
-        	if(receiverPort <=0) {    
+            }
+        	if(receiverPort <=0) {
         		// if port is 0 we assume the default port for TCP
         		this.peerPortAdvertisedInHeaders = 5060;
         	} else {
@@ -341,9 +330,9 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
         	}
         	if(logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
             	logger.logDebug("2.Storing peerPortAdvertisedInHeaders = " + peerPortAdvertisedInHeaders + " for this channel " + this + " key " + key);
-            }	        
+            }
         }
-        
+
         Socket sock = null;
         IOException problem = null;
         try {
@@ -356,7 +345,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
 
         }
         if(sock == null) { // http://java.net/jira/browse/JSIP-362 If we couldn't connect to the host, try the advertised host:port as failsafe
-        	if(peerAddressAdvertisedInHeaders  != null && peerPortAdvertisedInHeaders > 0) { 
+        	if(peerAddressAdvertisedInHeaders  != null && peerPortAdvertisedInHeaders > 0) {
                 if (logger.isLoggingEnabled(LogWriter.TRACE_WARN)) {
                     logger.logWarning("Couldn't connect to receiverAddress = " + receiverAddress
                             + " receiverPort = " + receiverPort + " key = " + key
@@ -376,8 +365,8 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
         		throw problem; // throw the original excpetion we had from the first attempt
         	}
         }
-      
-        if (sock != mySock && sock != null) {        	        	
+
+        if (sock != mySock && sock != null) {
             if (mySock != null) {
             	if(logger.isLoggingEnabled(LogWriter.TRACE_WARN)) {
        			 	 logger.logWarning(
@@ -386,7 +375,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
 		             logger.logWarning(
 		            		 "Old socket local ip address " + mySock.getLocalSocketAddress());
 		             logger.logWarning(
-		            		 "Old socket remote ip address " + mySock.getRemoteSocketAddress());                         
+		            		 "Old socket remote ip address " + mySock.getRemoteSocketAddress());
 		             logger.logWarning(
 		            		 "New socket local ip address " + sock.getLocalSocketAddress());
 		             logger.logWarning(
@@ -461,17 +450,17 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
 	            	 if (logger.isLoggingEnabled(LogWriter.TRACE_ERROR)) {
 	            		 logger.logError("Malformed mandatory headers: closing socket! :" + mySock.toString());
 	            	 }
-	                
+
 	            	try
 	            	{
 	            		mySock.close();
-	            		
+
 	            	} catch(IOException ie)
 	            	{
 	            		if (logger.isLoggingEnabled(LogWriter.TRACE_ERROR)) {
 	            			logger.logError("Exception while closing socket! :" + mySock.toString() + ":" + ie.toString());
 	            		}
-	            		
+
 	            	}
             	}
             }
@@ -480,7 +469,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
         } else {
             sipMessage.addUnparsed(header);
         }
-    }    
+    }
 
     /**
      * Equals predicate.
@@ -500,7 +489,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
             else
                 return true;
         }
-    }    
+    }
 
     /**
      * TCP Is not a secure protocol.
