@@ -66,6 +66,9 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
 
     protected TCPMessageChannel(SIPTransactionStack sipStack) {
     	super(sipStack);
+
+        // Start the keep alive process by scheduling a heartbeat
+        rescheduleHeartbeat(true);
     }
 
     /**
@@ -108,6 +111,11 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
         super.messageProcessor = msgProcessor;
         // Can drop this after response is sent potentially.
         mythread.start();
+
+        logger.logError("@NJB New TCP Message Channel: " + myPort);
+
+        // Start the keep alive process by scheduling a heartbeat
+        rescheduleHeartbeat(true);
     }
 
     /**
@@ -141,6 +149,10 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
         this.key = MessageChannel.getKey(peerAddress, peerPort, "TCP");
         super.messageProcessor = messageProcessor;
 
+        logger.logError("@NJB New TCP Message Channel: " + messageProcessor.getPort());
+
+        // Start the keep alive process by scheduling a heartbeat
+        rescheduleHeartbeat(true);
     }
 
     /**

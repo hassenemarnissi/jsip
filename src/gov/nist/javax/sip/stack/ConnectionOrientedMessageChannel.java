@@ -92,7 +92,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
      */
     private SIPStackTimerTask sendHeartbeatTimerTask;
 
-    private long keepAliveTimeout;
+    protected long keepAliveTimeout;
 
     private Random randomNumberGenerator = new Random();
 
@@ -103,10 +103,9 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
     		keepAliveSemaphore = new Semaphore(1);
     	}
 
-    	setKeepAliveTimeout(keepAliveTimeout);
+        setKeepAliveTimeout(keepAliveTimeout);
 
-    	// Start the keep alive process by scheduling a heartbeat
-    	rescheduleHeartbeat();
+    	logger.logError("@NJB new ConnectionOrientedMessageChannel created");
 	}
 
     /**
@@ -570,19 +569,19 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                     int nbytes = myClientInputStream.read(msg, 0, bufferSize);
                     // no more bytes to read...
                     if (nbytes == -1) {
-                        hispipe.write("\r\n\r\n".getBytes("UTF-8"));
-                        try {
-                            if (sipStack.maxConnections != -1) {
-                                synchronized (messageProcessor) {
-                                	((ConnectionOrientedMessageProcessor)this.messageProcessor).nConnections--;
-                                	messageProcessor.notify();
-                                }
-                            }
-                            hispipe.close();
-                            close();
-                        } catch (IOException ioex) {
-                        }
-                        return;
+//                        hispipe.write("\r\n\r\n".getBytes("UTF-8"));
+//                        try {
+//                            if (sipStack.maxConnections != -1) {
+//                                synchronized (messageProcessor) {
+//                                	((ConnectionOrientedMessageProcessor)this.messageProcessor).nConnections--;
+//                                	messageProcessor.notify();
+//                                }
+//                            }
+//                            hispipe.close();
+//                            close();
+//                        } catch (IOException ioex) {
+//                        }
+//                        return;
                     }
 
                     hispipe.write(msg, 0, nbytes);
@@ -730,14 +729,15 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 	                        +  ", clientPort=" + peerPort+ ", timeout="+ keepAliveTimeout + ")");
 	    		}
 	    		sipStack.getTimer().cancel(pingKeepAliveTimeoutTask);
+//
+//	            if (!pongReceived &&
+//	                sendHeartbeatTimerTask != null &&
+//	                sendHeartbeatTimerTask.getSipTimerTask() != null)
+//	            {
+//	                logger.logError("Canceling hearbeat timer task");
+//	                sipStack.getTimer().cancel(sendHeartbeatTimerTask);
+//	            }
 
-	    		// If we have received a pong from the server then we need to
-                // the ping
-	    		if (pongReceived)
-	    		{
-
-	    		    rescheduleHeartbeat();
-	    		}
 	    	} finally {
 	    		keepAliveSemaphore.release();
 	    	}
@@ -778,7 +778,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
      * chosen randomly between the upper and lower bounds defined in the SIP
      * stack properties (recommendations are given in RFC5626 section 4.4.1)
      */
-    private void rescheduleHeartbeat()
+    protected void rescheduleHeartbeat(boolean sendNow)
     {
         SipTimer sipStackTimer = sipStack.getTimer();
 
@@ -786,10 +786,15 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         if (sipStackTimer == null)
             return;
 
-        int lowerBound = getSIPStack().getHeartbeatLowerBound();
-        int upperBound = getSIPStack().getHeartbeatUpperBound();
+        int heartbeatDelay = 0;
+        if (!sendNow)
+        {
+            int lowerBound = getSIPStack().getHeartbeatLowerBound();
+            int upperBound = getSIPStack().getHeartbeatUpperBound();
 
-        int heartbeatDelay = randomNumberGenerator.nextInt((upperBound - lowerBound) + 1) + lowerBound;
+            heartbeatDelay = randomNumberGenerator.nextInt((upperBound - lowerBound) + 1) + lowerBound;
+
+        }
 
         if (sendHeartbeatTimerTask == null)
         {
@@ -936,6 +941,8 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                     }
                 }
             }
+
+            rescheduleHeartbeat(false);
         }
     }
 }
