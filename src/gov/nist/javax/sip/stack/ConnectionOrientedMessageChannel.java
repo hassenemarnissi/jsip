@@ -95,7 +95,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
     private long keepAliveTimeout;
 
     private Random randomNumberGenerator = new Random();
-    
+
     public ConnectionOrientedMessageChannel(SIPTransactionStack sipStack) {
     	this.sipStack = sipStack;
         this.keepAliveTimeout = sipStack.getReliableConnectionKeepAliveTimeout();
@@ -104,7 +104,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
     	}
 
     	setKeepAliveTimeout(keepAliveTimeout);
-    	
+
     	// Start the keep alive process by scheduling a heartbeat
     	rescheduleHeartbeat();
 	}
@@ -903,30 +903,33 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         {
             if (sipStack instanceof SipStackImpl)
             {
-                Iterator<SipProviderImpl> providers = ((SipStackImpl)sipStack).getSipProviders();
-                while (providers.hasNext())
+                Iterator<ListeningPoint> listeningPoints = ((SipStackImpl)sipStack).getListeningPoints();
+
+                while (listeningPoints.hasNext())
                 {
-                    SipProviderImpl nextProvider = providers.next();
-                    ListeningPoint[] listeningPoints = nextProvider.getListeningPoints();
+                    ListeningPoint listeningPoint = listeningPoints.next();
 
-                    for (ListeningPoint listeningPoint : listeningPoints)
+                    // Only send to the listening point that matches our
+                    // current transport
+                    logger.logError("@NJB listening point transport: " + listeningPoint.getTransport() +
+                                    " My transport: " + getTransport());
+                    if (listeningPoint instanceof ListeningPointExt &&
+                        listeningPoint.getTransport().equalsIgnoreCase(getTransport()))
                     {
-                        if (listeningPoint instanceof ListeningPointExt)
+                        try
                         {
-                            try
-                            {
-                                logger.logError("@NJB Sending heartbeat to peer: " +
-                                        peerAddress.getHostAddress() + ":" + peerPort);
+                            logger.logError("@NJB Sending heartbeat to peer: " +
+                                    peerAddress.getHostAddress() + ":" + peerPort +
+                                    " ListeningPoint: " + listeningPoint.getIPAddress() + " " + listeningPoint.getPort() + " " + listeningPoint.getTransport() + " " + listeningPoint.getSentBy());
 
-                                ((ListeningPointExt) listeningPoint).
-                                            sendHeartbeat(peerAddress.getHostAddress(),
-                                                          peerPort);
-                            }
-                            catch (IOException ex)
-                            {
-                                logger.logWarning("Failed to send heartbeat to peer: " +
-                                        peerAddress.getHostAddress() + ":" + peerPort);
-                            }
+                            ((ListeningPointExt) listeningPoint).sendHeartbeat(
+                                                   peerAddress.getHostAddress(),
+                                                   peerPort);
+                        }
+                        catch (IOException ex)
+                        {
+                            logger.logWarning("Failed to send heartbeat to peer: " +
+                                    peerAddress.getHostAddress() + ":" + peerPort);
                         }
                     }
                 }
