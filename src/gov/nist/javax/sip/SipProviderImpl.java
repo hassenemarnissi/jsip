@@ -28,60 +28,22 @@
  ******************************************************************************/
 package gov.nist.javax.sip;
 
-import gov.nist.core.CommonLogger;
-import gov.nist.core.InternalErrorHandler;
-import gov.nist.core.LogLevels;
-import gov.nist.core.LogWriter;
-import gov.nist.core.StackLogger;
+import gov.nist.core.*;
 import gov.nist.javax.sip.DialogTimeoutEvent.Reason;
-import gov.nist.javax.sip.address.RouterExt;
-import gov.nist.javax.sip.header.CallID;
-import gov.nist.javax.sip.header.Via;
-import gov.nist.javax.sip.message.RequestExt;
-import gov.nist.javax.sip.message.SIPMessage;
-import gov.nist.javax.sip.message.SIPRequest;
-import gov.nist.javax.sip.message.SIPResponse;
-import gov.nist.javax.sip.stack.HopImpl;
-import gov.nist.javax.sip.stack.MessageChannel;
-import gov.nist.javax.sip.stack.SIPClientTransaction;
-import gov.nist.javax.sip.stack.SIPDialog;
-import gov.nist.javax.sip.stack.SIPDialogErrorEvent;
-import gov.nist.javax.sip.stack.SIPDialogEventListener;
-import gov.nist.javax.sip.stack.SIPServerTransaction;
-import gov.nist.javax.sip.stack.SIPTransaction;
-import gov.nist.javax.sip.stack.SIPTransactionErrorEvent;
-import gov.nist.javax.sip.stack.SIPTransactionEventListener;
-import gov.nist.javax.sip.stack.SIPTransactionStack;
+import gov.nist.javax.sip.address.*;
+import gov.nist.javax.sip.header.*;
+import gov.nist.javax.sip.message.*;
+import gov.nist.javax.sip.stack.*;
 
-import java.io.IOException;
-import java.text.ParseException;
-import java.util.EventObject;
-import java.util.Iterator;
-import java.util.TooManyListenersException;
-import java.util.concurrent.ConcurrentHashMap;
+import java.io.*;
+import java.text.*;
+import java.util.*;
+import java.util.concurrent.*;
 
-import javax.sip.ClientTransaction;
-import javax.sip.Dialog;
-import javax.sip.DialogState;
-import javax.sip.InvalidArgumentException;
-import javax.sip.ListeningPoint;
-import javax.sip.ObjectInUseException;
-import javax.sip.RequestEvent;
-import javax.sip.ResponseEvent;
-import javax.sip.ServerTransaction;
-import javax.sip.SipException;
-import javax.sip.SipListener;
-import javax.sip.SipStack;
-import javax.sip.Timeout;
-import javax.sip.TimeoutEvent;
-import javax.sip.Transaction;
-import javax.sip.TransactionAlreadyExistsException;
-import javax.sip.TransactionState;
-import javax.sip.TransactionUnavailableException;
-import javax.sip.address.Hop;
-import javax.sip.header.CallIdHeader;
-import javax.sip.message.Request;
-import javax.sip.message.Response;
+import javax.sip.*;
+import javax.sip.address.*;
+import javax.sip.header.*;
+import javax.sip.message.*;
 
 /*
  * Contributions (bug fixes) made by: Daniel J. Martinez Manzano, Hagai Sela.
@@ -112,10 +74,15 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
 
     protected EventScanner eventScanner;
 
-    private boolean automaticDialogSupportEnabled ; 
-    
+    private boolean automaticDialogSupportEnabled ;
+
     private boolean dialogErrorsAutomaticallyHandled = true;
-    
+
+    /**
+     * The registrar for this provider
+     */
+    private SipListener registrar;
+
     private SipProviderImpl() {
 
     }
@@ -206,7 +173,7 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
         throw new java.lang.CloneNotSupportedException();
     }
 
-    
+
     /*
      * (non-Javadoc)
      *
@@ -259,7 +226,7 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
 
     }
 
-    
+
     /**
      * @param request
      * @param hop
@@ -274,7 +241,7 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
         throw new NullPointerException("null hop");
       if (!sipStack.isAlive())
         throw new TransactionUnavailableException("Stack is stopped");
-      
+
       SIPRequest sipRequest = (SIPRequest) request;
       if (sipRequest.getTransaction() != null)
         throw new TransactionUnavailableException(
@@ -303,7 +270,7 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
       } catch (ParseException ex) {
         throw new TransactionUnavailableException(ex.getMessage(), ex);
       }
-      
+
       /*
        * User decided to give us his own via header branch. Lets see if it
        * results in a clash. If so reject the request.
@@ -315,57 +282,57 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
         throw new TransactionUnavailableException(
                                                   "Transaction already exists!");
       }
-      
-      
-      
-      
+
+
+
+
       if (sipRequest.getMethod().equalsIgnoreCase(Request.CANCEL)) {
         SIPClientTransaction ct = (SIPClientTransaction) sipStack
           .findCancelTransaction((SIPRequest) sipRequest, false);
         if (ct != null) {
           SIPClientTransaction retval = sipStack.createClientTransaction(sipRequest, ct.getMessageChannel());
-          
+
           ((SIPTransaction) retval).addEventListener(this);
           sipStack.addTransaction( retval);
           if (ct.getDialog() != null) {
               retval.setDialog((SIPDialog) ct.getDialog(), sipRequest.getDialogId(false));
-            
+
           }
           return retval;
         }
-        
+
       }
       if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG))
         logger.logDebug(
                         "could not find existing transaction for "
                           + sipRequest.getFirstLine()
                           + " creating a new one ");
-      
+
       // Could not find a dialog or the route is not set in dialog.
-      
+
       String transport = hop.getTransport();
       ListeningPointImpl listeningPoint = (ListeningPointImpl) this
         .getListeningPoint(transport);
-      
+
       String dialogId = sipRequest.getDialogId(false);
       SIPDialog dialog = sipStack.getDialog(dialogId);
       if (dialog != null && dialog.getState() == DialogState.TERMINATED) {
-        
+
         // throw new TransactionUnavailableException
         // ("Found a terminated dialog -- possible re-use of old tag
         // parameters");
         sipStack.removeDialog(dialog);
-        
+
       }
-      
+
       // An out of dialog route was found. Assign this to the
       // client transaction.
-      
+
       try {
         // Set the brannch id before you ask for a tx.
         // If the user has set his own branch Id and the
         // branch id starts with a valid prefix, then take it.
-        // otherwise, generate one. If branch ID checking has 
+        // otherwise, generate one. If branch ID checking has
         // been requested, set the branch ID.
         String branchId = null;
         if (sipRequest.getTopmostVia().getBranch() == null
@@ -373,19 +340,19 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
                                                                 SIPConstants.BRANCH_MAGIC_COOKIE)
                                                                 || sipStack.checkBranchId() ) {
           branchId = Utils.getInstance().generateBranchId();
-          
+
           sipRequest.getTopmostVia().setBranch(branchId);
         }
         Via topmostVia = sipRequest.getTopmostVia();
-        
+
         //set port and transport if user hasn't already done this.
         if(topmostVia.getTransport() == null)
           topmostVia.setTransport(transport);
-        
+
         if(topmostVia.getPort() == -1)
           topmostVia.setPort(listeningPoint.getPort());
         branchId = sipRequest.getTopmostVia().getBranch();
-        
+
          MessageChannel messageChannel = sipStack
             .createMessageChannel(sipRequest, listeningPoint
                                 .getMessageProcessor(), hop);
@@ -412,18 +379,18 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
           if (dialog != null) {
             ct.setDialog(dialog, sipRequest.getDialogId(false));
           }
-          
+
         }
-        
+
         // The provider is the event listener for all transactions.
         ct.addEventListener(this);
         return ct;
       } catch (IOException ex) {
-        
+
         throw new TransactionUnavailableException(
                                                   "Could not resolve next hop or listening point unavailable! ",
                                                   ex);
-        
+
       } catch (java.text.ParseException ex) {
         InternalErrorHandler.handleException(ex);
         throw new TransactionUnavailableException(
@@ -433,7 +400,7 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
         throw new TransactionUnavailableException(
                                                   "Unexpected Exception FIXME! ", ex);
       }
-      
+
     }
     /*
      * (non-Javadoc)
@@ -722,7 +689,7 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
                         this.getListeningPoint(hop.getTransport()).getIPAddress(),
                         this.getListeningPoint(hop.getTransport()).getPort(), hop);
             }
-            
+
             if (messageChannel != null) {
                 messageChannel.sendMessage((SIPMessage) sipRequest,hop);
             } else {
@@ -992,7 +959,7 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
             this.handleEvent(ev, (SIPTransaction) errorObject);
         }
     }
-    
+
     /*
      * (non-Javadoc)
      * @see gov.nist.javax.sip.stack.SIPDialogEventListener#dialogErrorEvent(gov.nist.javax.sip.stack.SIPDialogErrorEvent)
@@ -1013,7 +980,7 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
         }
         DialogTimeoutEvent ev = new DialogTimeoutEvent(this, sipDialog, reason);
         ev.setClientTransaction(dialogErrorEvent.getClientTransaction());
-        
+
         // Handling transport error like timeout
         this.handleEvent(ev, null);
     }
@@ -1043,8 +1010,8 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
             throw new ObjectInUseException(
                     "Listening point assigned to another provider");
         String transport = lp.getTransport().toUpperCase();
-        
-        
+
+
         if (this.listeningPoints.containsKey(transport)
                 && this.listeningPoints.get(transport) != listeningPoint)
             throw new ObjectInUseException(
@@ -1112,7 +1079,7 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
     public void setDialogErrorsAutomaticallyHandled() {
         this.dialogErrorsAutomaticallyHandled = true;
     }
-    
+
     public boolean isDialogErrorsAutomaticallyHandled() {
         return this.dialogErrorsAutomaticallyHandled;
     }
@@ -1125,5 +1092,23 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
         return sipListener;
     }
 
-   
+    @Override
+    public void setRegistrar(SipListener registrar)
+    {
+        logger.logError("@NJB Setting registrar for provider " + this + " as " + registrar);
+        this.registrar = registrar;
+    }
+
+    /**
+     * Notifies the SIP registrar that the connection has failed so it can
+     * re-register if necessary
+     */
+    public void handleConnectionFailed()
+    {
+        logger.logError("@NJB Notifying registrar " + registrar + " that the connection has failed");
+        if (registrar != null)
+        {
+            registrar.processIOException(null);
+        }
+    }
 }

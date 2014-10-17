@@ -95,6 +95,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
                     "creating new TCPMessageChannel ");
             logger.logStackTrace();
         }
+        logger.logError("@NJB mySock was: " + mySock + " Now: " + sock);
         mySock = sock;
         peerAddress = mySock.getInetAddress();
         myAddress = msgProcessor.getIpAddress().getHostAddress();
@@ -295,6 +296,8 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
 	                		 "There was no exception for the retry mechanism so creating a new thread based on the new socket for incoming " + key);
 	        		}
        		}
+
+       		    logger.logError("@NJB mySock was: " + mySock + " Now: " + sock);
 	            mySock = sock;
 	            this.myClientInputStream = mySock.getInputStream();
 	            this.myClientOutputStream = mySock.getOutputStream();
@@ -307,6 +310,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
        			logger.logWarning(
        					"There was an exception for the retry mechanism so not creating a new thread based on the new socket for incoming " + key);
        		}
+       		logger.logError("@NJB mySock was: " + mySock + " Now: " + sock);
        		mySock = sock;
        	}
        }
@@ -402,6 +406,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
             					"There was no exception for the retry mechanism so creating a new thread based on the new socket for incoming " + key);
             		}
             	}
+            	logger.logError("@NJB mySock was: " + mySock + " Now: " + sock);
 	            mySock = sock;
 	            this.myClientInputStream = mySock.getInputStream();
 	            this.myClientOutputStream = mySock.getOutputStream();
@@ -415,6 +420,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
             		logger.logWarning(
             			"There was an exception for the retry mechanism so not creating a new thread based on the new socket for incoming " + key);
             	}
+            	logger.logError("@NJB mySock was: " + mySock + " Now: " + sock);
             	mySock = sock;
             }
         }

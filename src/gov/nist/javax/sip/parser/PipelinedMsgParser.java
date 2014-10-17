@@ -337,6 +337,14 @@ public final class PipelinedMsgParser implements Runnable {
                             }
                             continue;
                         } else if(CRLF.equals(line1)) {
+                            byte[] bytes = line1.getBytes();
+                            String[] out = new String[bytes.length];
+                            for (int i = 0; i < bytes.length; i++)
+                            {
+                                out[i] = String.format("%02x", bytes[i]);
+                            }
+                            logger.logError("@NJB " + Arrays.toString(out));
+
 	                        	if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG)) {
 	                            	logger.logDebug("Received CRLF");
 	                            }

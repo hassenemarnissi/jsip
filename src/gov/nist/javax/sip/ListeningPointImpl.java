@@ -239,7 +239,6 @@ public class ListeningPointImpl implements javax.sip.ListeningPoint, gov.nist.ja
 
     public void sendHeartbeat(String ipAddress, int port) throws IOException {
 
-        logger.logError("@NJB Sending heartbeat " + sipStack.isAlive());
     	if(!sipStack.isAlive())
     		return;
         HostPort targetHostPort  = new HostPort();
@@ -249,7 +248,7 @@ public class ListeningPointImpl implements javax.sip.ListeningPoint, gov.nist.ja
         SIPRequest siprequest = new SIPRequest();
         siprequest.setNullRequest();
 
-        logger.logError("@NJB Sending heartbeat to: " + targetHostPort + " from: " + messageChannel.getPort());
+        logger.logError("@NJB Sending heartbeat to: " + targetHostPort);
 
         if(messageChannel instanceof ConnectionOrientedMessageChannel) {
         	// RFC 5626 : schedule the keepaive timeout to make sure we receive a pong response and notify the app if not

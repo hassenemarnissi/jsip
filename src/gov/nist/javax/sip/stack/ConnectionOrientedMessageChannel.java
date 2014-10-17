@@ -176,6 +176,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                     && messageProcessor.getPort() == this.getPeerPort()
                     && messageProcessor.getTransport().equalsIgnoreCase(
                             this.getPeerProtocol())) {
+                logger.logError("@NJB processing SIP messages on port: " + messageProcessor.getPort());
                 Runnable processMessageTask = new Runnable() {
 
                     public void run() {
@@ -552,6 +553,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         // Create a pipeline to connect to our message parser.
         hispipe = new Pipeline(myClientInputStream, sipStack.readTimeout,
                 ((SIPTransactionStack) sipStack).getTimer());
+
         // Create a pipelined message parser to read and parse
         // messages that we write out to him.
         myParser = new PipelinedMsgParser(sipStack, this, hispipe,
@@ -569,30 +571,33 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                     int nbytes = myClientInputStream.read(msg, 0, bufferSize);
                     // no more bytes to read...
                     if (nbytes == -1) {
-//                        hispipe.write("\r\n\r\n".getBytes("UTF-8"));
-//                        try {
-//                            if (sipStack.maxConnections != -1) {
-//                                synchronized (messageProcessor) {
-//                                	((ConnectionOrientedMessageProcessor)this.messageProcessor).nConnections--;
-//                                	messageProcessor.notify();
-//                                }
-//                            }
-//                            hispipe.close();
-//                            close();
-//                        } catch (IOException ioex) {
-//                        }
-//                        return;
+                        //hispipe.write("\r\n\r\n".getBytes("UTF-8"));
+                        try {
+                            if (sipStack.maxConnections != -1) {
+                                synchronized (messageProcessor) {
+                                	((ConnectionOrientedMessageProcessor)this.messageProcessor).nConnections--;
+                                	messageProcessor.notify();
+                                }
+                            }
+                            hispipe.close();
+                            close(true, false);
+                        } catch (IOException ioex) {
+                        }
+                        // This socket has not been closed cleanly - reopen
+                        // it.
+                        reOpenSocket();
+                        return;
                     }
 
                     hispipe.write(msg, 0, nbytes);
 
                 } catch (IOException ex) {
                     // Terminate the message.
-                    try {
-                        hispipe.write("\r\n\r\n".getBytes("UTF-8"));
-                    } catch (Exception e) {
-                        // InternalErrorHandler.handleException(e);
-                    }
+//                    try {
+//                        hispipe.write("\r\n\r\n".getBytes("UTF-8"));
+//                    } catch (Exception e) {
+//                        // InternalErrorHandler.handleException(e);
+//                    }
 
                     try {
                         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
@@ -605,13 +610,16 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                                 	messageProcessor.notify();
                                 }
                             }
-                            close();
+                            close(true, false);
                             hispipe.close();
                         } catch (IOException ioex) {
                         }
                     } catch (Exception ex1) {
                         // Do nothing.
                     }
+                    // This socket has not been closed cleanly - reopen
+                    // it.
+                    reOpenSocket();
                     return;
                 } catch (Exception ex) {
                     InternalErrorHandler.handleException(ex, logger);
@@ -626,9 +634,15 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
             	myParser.close();
             }
         }
-
     }
 
+    private void reOpenSocket()
+    {
+        logger.logError("@NJB I want to reopen socket: " + mySock);
+        if (mySock != null)
+        {
+        }
+    }
 
     protected void uncache() {
         if (isCached && !isRunning) {
@@ -871,6 +885,9 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
     class KeepAliveTimeoutTimerTask extends SIPStackTimerTask {
 
         public void runTask() {
+            logger.logError("@NJB ############################################\n" +
+                            "     Failed to get Heartbeat response\n" +
+                            "     ############################################");
         	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
         		logger.logDebug(
                         "~~~ Starting processing of KeepAliveTimeoutEvent( " + peerAddress.getHostAddress() + "," + peerPort + ")...");
@@ -882,7 +899,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 	                SipListener sipListener= nextProvider.getSipListener();
 	                ListeningPoint[] listeningPoints = nextProvider.getListeningPoints();
 	                for(ListeningPoint listeningPoint : listeningPoints) {
-		            	if(sipListener!= null && sipListener instanceof SipListenerExt
+		            	if(sipListener != null && sipListener instanceof SipListenerExt
 		            			// making sure that we don't notify each listening point but only the one on which the timeout happened
 		            			&& listeningPoint.getIPAddress().equalsIgnoreCase(myAddress) && listeningPoint.getPort() == myPort &&
 		            				listeningPoint.getTransport().equalsIgnoreCase(getTransport())) {
@@ -890,6 +907,8 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 		            				peerAddress.getHostAddress(), peerPort, getTransport()));
 		                }
 	                }
+
+	                nextProvider.handleConnectionFailed();
 	            }
             } else {
 	            SipListener sipListener = sipStack.getSipListener();
@@ -924,14 +943,14 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                     {
                         try
                         {
-                            logger.logError("@NJB Sending heartbeat to peer: " +
-                                    peerAddress.getHostAddress() + ":" + peerPort +
-                                    " ListeningPoint: " + listeningPoint.getIPAddress() + " " + listeningPoint.getPort() + " " + listeningPoint.getTransport() + " " + listeningPoint.getSentBy());
-
-                            logger.logError("@NJB Sending heartbeat from port: " + myPort);
                             ((ListeningPointExt) listeningPoint).sendHeartbeat(
                                                    peerAddress.getHostAddress(),
                                                    peerPort);
+
+                            if (mySock != null)
+                                logger.logError("@NJB Sent heartbeat from port: " + mySock.getLocalPort());
+                            else
+                                logger.logError("@NJB Sent hearbeat");
                         }
                         catch (IOException ex)
                         {

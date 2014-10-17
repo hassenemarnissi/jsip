@@ -28,21 +28,15 @@
  *******************************************************************************/
 package gov.nist.javax.sip.stack;
 
-import gov.nist.core.CommonLogger;
-import gov.nist.core.LogLevels;
-import gov.nist.core.LogWriter;
-import gov.nist.core.StackLogger;
-import gov.nist.javax.sip.SipStackImpl;
+import gov.nist.core.*;
+import gov.nist.javax.sip.*;
 
-import javax.net.ssl.SSLHandshakeException;
-import javax.net.ssl.SSLSocket;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.*;
-import java.util.Enumeration;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
+
+import javax.net.ssl.*;
 
 /*
  * TLS support Added by Daniel J.Martinez Manzano <dani@dif.um.es>
@@ -61,7 +55,7 @@ import java.util.concurrent.TimeUnit;
  */
 
 public class IOHandler {
-	
+
 	private static StackLogger logger = CommonLogger.getLogger(IOHandler.class);
 
     private SipStackImpl sipStack;
@@ -294,6 +288,7 @@ public class IOHandler {
             try {
                 clientSock = getSocket(key);
                 while (retry_count < max_retry) {
+                    logger.logError("@NJB retry_count " + retry_count + " of " + max_retry);
                     if (clientSock == null) {
                         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
                             logger.logDebug(
@@ -310,10 +305,11 @@ public class IOHandler {
                         try {
                             clientSock = sipStack.getNetworkLayer().createSocket(
                                     receiverAddress, contactPort, senderAddress);
+                            logger.logError("@NJB created new client socket " + clientSock);
                         }
                         catch (SocketException e)
                         {
-                            String log ="Problem connecting to " + receiverAddress + 
+                            String log ="Problem connecting to " + receiverAddress +
                                     " " + contactPort +
                                     " from " + senderAddress +
                                     " for message " + new String(bytes, "UTF-8");
@@ -338,6 +334,11 @@ public class IOHandler {
                         putSocket(key, clientSock);
                         break;
                     } else {
+                        if (clientSock.isClosed())
+                        {
+                            logger.logError("@NJB client socket is closed " + clientSock);
+                        }
+
                         try {
                             OutputStream outputStream = clientSock
                                     .getOutputStream();
@@ -384,7 +385,7 @@ public class IOHandler {
                             " peerPacketPort " + messageChannel.getPeerPacketSourcePort() +
                             " isClient " + isClient, ex);
                 }
-                removeSocket(key);                                
+                removeSocket(key);
             } finally {
                 leaveIOCriticalSection(key);
             }
@@ -547,13 +548,13 @@ public class IOHandler {
             Semaphore newCreationSemaphore = new Semaphore(1, true);
             creationSemaphore = socketCreationMap.putIfAbsent(key, newCreationSemaphore);
             if(creationSemaphore == null) {
-                creationSemaphore = newCreationSemaphore;       
+                creationSemaphore = newCreationSemaphore;
                 if (logger.isLoggingEnabled(StackLogger.TRACE_DEBUG)) {
                     logger.logDebug("new Semaphore added for key " + key);
                 }
             }
         }
-        
+
         try {
             boolean retval = creationSemaphore.tryAcquire(10, TimeUnit.SECONDS);
             if (!retval) {
