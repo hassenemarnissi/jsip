@@ -106,6 +106,9 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         setKeepAliveTimeout(keepAliveTimeout);
 
     	logger.logError("@NJB new ConnectionOrientedMessageChannel created");
+    	//logger.logError("@@@ENH Hack- setting timer, so we reregister, etc");
+   		//KeepAliveTimeoutTimerTask pingKeepAliveTimeoutTask = new KeepAliveTimeoutTimerTask();
+   		//sipStack.getTimer().schedule(pingKeepAliveTimeoutTask, 1000);
 	}
 
     /**
@@ -585,7 +588,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                         }
                         // This socket has not been closed cleanly - reopen
                         // it.
-                        reOpenSocket();
+                        //connectionFailed();
                         return;
                     }
 
@@ -619,7 +622,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                     }
                     // This socket has not been closed cleanly - reopen
                     // it.
-                    reOpenSocket();
+                    //connectionFailed();
                     return;
                 } catch (Exception ex) {
                     InternalErrorHandler.handleException(ex, logger);
@@ -633,14 +636,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
             if(myParser != null) {
             	myParser.close();
             }
-        }
-    }
-
-    private void reOpenSocket()
-    {
-        logger.logError("@NJB I want to reopen socket: " + mySock);
-        if (mySock != null)
-        {
         }
     }
 
@@ -806,7 +801,9 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
             int lowerBound = getSIPStack().getHeartbeatLowerBound();
             int upperBound = getSIPStack().getHeartbeatUpperBound();
 
-            heartbeatDelay = randomNumberGenerator.nextInt((upperBound - lowerBound) + 1) + lowerBound;
+            //heartbeatDelay = randomNumberGenerator.nextInt((upperBound - lowerBound) + 1) + lowerBound;
+        logger.logError("@@@ENH hack");
+        heartbeatDelay = 21;
 
         }
 
@@ -818,6 +815,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         // Cancel the existing task for safety
         if (sendHeartbeatTimerTask.getSipTimerTask() != null)
             sipStackTimer.cancel(sendHeartbeatTimerTask);
+
 
         logger.logError("@NJB  Scheduling heartbeat in " + heartbeatDelay + "s");
 
@@ -854,6 +852,9 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 			return;
 		}
 		try{
+          logger.logError("@@@ ENH keep alive 2000");
+          keepAliveTimeout = 2000;
+
 	        if(pingKeepAliveTimeoutTask == null) {
 	        	pingKeepAliveTimeoutTask = new KeepAliveTimeoutTimerTask();
 	        	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
@@ -893,6 +894,23 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                         "~~~ Starting processing of KeepAliveTimeoutEvent( " + peerAddress.getHostAddress() + "," + peerPort + ")...");
         	}
         	close(true, true);
+
+          connectionFailed();
+        }
+    }
+
+    boolean connectionFailedCalled = false;
+    void connectionFailed()
+    {
+        if (connectionFailedCalled)
+        {
+            logger.logError("##################### Already called connection failed once");
+            return;
+        }
+
+        logger.logError("############# Failing connection");
+        connectionFailedCalled = true;
+
             if(sipStack instanceof SipStackImpl) {
 	            for (Iterator<SipProviderImpl> it = ((SipStackImpl)sipStack).getSipProviders(); it.hasNext();) {
 	                SipProviderImpl nextProvider = (SipProviderImpl) it.next();
@@ -917,7 +935,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 	                    peerAddress.getHostAddress(), peerPort, getTransport()));
 	            }
             }
-        }
     }
 
     /**

@@ -3319,7 +3319,8 @@ public abstract class SIPTransactionStack implements
      */
     public int getHeartbeatUpperBound()
     {
-        return heartbeatUpperBound;
+        //logger.error("ENH hack- returning 10");
+        return 10;//heartbeatUpperBound;
     }
 
     public void setHeartbeatUpperBound(int upperBound)
