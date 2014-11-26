@@ -29,9 +29,8 @@
 package javax.sip;
 
 import java.util.*;
-
-import javax.sip.header.*;
 import javax.sip.message.*;
+import javax.sip.header.*;
 
 /**
  * This interface represents the messaging entity of a SIP stack and as
@@ -546,11 +545,5 @@ public interface SipProvider {
      */
     public void setAutomaticDialogSupportEnabled(boolean flag);
 
-//    /**
-//     * Sets the registrar for this provider.
-//     *
-//     * @param registrar the registrar for this provider
-//     */
-//    public void setRegistrar(SipListener registrar);
 }
 

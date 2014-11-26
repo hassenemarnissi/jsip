@@ -28,13 +28,24 @@
  ******************************************************************************/
 package gov.nist.javax.sip.stack;
 
-import gov.nist.core.*;
-import gov.nist.javax.sip.header.*;
-import gov.nist.javax.sip.message.*;
+import gov.nist.core.CommonLogger;
+import gov.nist.core.LogWriter;
+import gov.nist.core.StackLogger;
+import gov.nist.javax.sip.header.CSeq;
+import gov.nist.javax.sip.header.CallID;
+import gov.nist.javax.sip.header.ContentLength;
+import gov.nist.javax.sip.header.From;
+import gov.nist.javax.sip.header.RequestLine;
+import gov.nist.javax.sip.header.StatusLine;
+import gov.nist.javax.sip.header.To;
+import gov.nist.javax.sip.header.Via;
+import gov.nist.javax.sip.message.SIPMessage;
 
-import java.io.*;
-import java.net.*;
-import java.text.*;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.text.ParseException;
 
 /*
  * Ahmet Uyar <auyar@csit.fsu.edu>sent in a bug report for TCP operation of the JAIN sipStack.
@@ -68,7 +79,6 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
     	super(sipStack);
 
         // Start the keep alive process by scheduling a heartbeat
-    	logger.logFatalError("@@@JH2 starting process");
         rescheduleHeartbeat(true);
     }
 
@@ -96,7 +106,6 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
                     "creating new TCPMessageChannel ");
             logger.logStackTrace();
         }
-        logger.logError("@NJB mySock was: " + mySock + " Now: " + sock);
         mySock = sock;
         peerAddress = mySock.getInetAddress();
         myAddress = msgProcessor.getIpAddress().getHostAddress();
@@ -113,8 +122,6 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
         super.messageProcessor = msgProcessor;
         // Can drop this after response is sent potentially.
         mythread.start();
-
-        logger.logError("@NJB New TCP Message Channel: " + myPort);
 
         // Start the keep alive process by scheduling a heartbeat
         rescheduleHeartbeat(true);
@@ -151,8 +158,6 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
         this.key = MessageChannel.getKey(peerAddress, peerPort, "TCP");
         super.messageProcessor = messageProcessor;
 
-        logger.logError("@NJB New TCP Message Channel: " + messageProcessor.getPort());
-
         // Start the keep alive process by scheduling a heartbeat
         rescheduleHeartbeat(true);
     }
@@ -166,7 +171,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
     	// like in LB scenarios sending OPTIONS and killing the socket after it gets the response
         if (mySock != null) {
         	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
-                logger.logError("Closing socket " + key, new RuntimeException());
+                logger.logDebug("Closing socket " + key);
         	try {
 	            mySock.close();
 	            mySock = null;
@@ -297,21 +302,18 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
 	                		 "There was no exception for the retry mechanism so creating a new thread based on the new socket for incoming " + key);
 	        		}
        		}
-
-       		    logger.logError("@NJB mySock was: " + mySock + " Now: " + sock);
-	            mySock = sock;
-	            this.myClientInputStream = mySock.getInputStream();
-	            this.myClientOutputStream = mySock.getOutputStream();
-	            Thread thread = new Thread(this);
-	            thread.setDaemon(true);
-	            thread.setName("TCPMessageChannelThread");
-	            thread.start();
+            mySock = sock;
+            this.myClientInputStream = mySock.getInputStream();
+            this.myClientOutputStream = mySock.getOutputStream();
+            Thread thread = new Thread(this);
+            thread.setDaemon(true);
+            thread.setName("TCPMessageChannelThread");
+            thread.start();
        	} else {
        		if(logger.isLoggingEnabled(LogWriter.TRACE_WARN)) {
        			logger.logWarning(
        					"There was an exception for the retry mechanism so not creating a new thread based on the new socket for incoming " + key);
        		}
-       		logger.logError("@NJB mySock was: " + mySock + " Now: " + sock);
        		mySock = sock;
        	}
        }
@@ -407,7 +409,6 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
             					"There was no exception for the retry mechanism so creating a new thread based on the new socket for incoming " + key);
             		}
             	}
-            	logger.logError("@NJB mySock was: " + mySock + " Now: " + sock);
 	            mySock = sock;
 	            this.myClientInputStream = mySock.getInputStream();
 	            this.myClientOutputStream = mySock.getOutputStream();
@@ -421,7 +422,6 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
             		logger.logWarning(
             			"There was an exception for the retry mechanism so not creating a new thread based on the new socket for incoming " + key);
             	}
-            	logger.logError("@NJB mySock was: " + mySock + " Now: " + sock);
             	mySock = sock;
             }
         }

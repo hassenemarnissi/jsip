@@ -26,24 +26,35 @@
 package gov.nist.javax.sip.stack;
 
 import gov.nist.core.*;
-import gov.nist.core.net.*;
+import gov.nist.core.net.AddressResolver;
+import gov.nist.core.net.DefaultNetworkLayer;
+import gov.nist.core.net.NetworkLayer;
+import gov.nist.core.net.SecurityManagerProvider;
 import gov.nist.javax.sip.*;
-import gov.nist.javax.sip.header.*;
-import gov.nist.javax.sip.header.extensions.*;
-import gov.nist.javax.sip.message.*;
-import gov.nist.javax.sip.parser.*;
-import gov.nist.javax.sip.stack.timers.*;
-
-import java.io.*;
-import java.net.*;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.*;
+import gov.nist.javax.sip.header.Event;
+import gov.nist.javax.sip.header.Via;
+import gov.nist.javax.sip.header.extensions.JoinHeader;
+import gov.nist.javax.sip.header.extensions.ReplacesHeader;
+import gov.nist.javax.sip.message.SIPMessage;
+import gov.nist.javax.sip.message.SIPRequest;
+import gov.nist.javax.sip.message.SIPResponse;
+import gov.nist.javax.sip.parser.MessageParserFactory;
+import gov.nist.javax.sip.stack.timers.SipTimer;
 
 import javax.sip.*;
-import javax.sip.address.*;
-import javax.sip.header.*;
-import javax.sip.message.*;
+import javax.sip.address.Hop;
+import javax.sip.address.Router;
+import javax.sip.header.CallIdHeader;
+import javax.sip.header.EventHeader;
+import javax.sip.message.Request;
+import javax.sip.message.Response;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.SocketAddress;
+import java.net.UnknownHostException;
+import java.util.*;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /*
  * Jeff Keyser : architectural suggestions and contributions. Pierre De Rop and Thomas Froment :
@@ -403,7 +414,7 @@ public abstract class SIPTransactionStack implements
     /**
      * The upper bound of the heartbeat timer (RFC5626 section 4.4.1)
      */
-    private int heartbeatUpperBound = 120;
+    private int heartbeatUpperBound = 30;
 
     private static class SameThreadExecutor implements Executor {
 
@@ -3175,12 +3186,14 @@ public abstract class SIPTransactionStack implements
 //        } else
         if (reliableConnectionKeepAliveTimeout == 0){
 
-        	if (logger.isLoggingEnabled(LogWriter.TRACE_INFO)) {
-                logger.logInfo("Default value (10000 ms) will be used for reliableConnectionKeepAliveTimeout stack property");
-        	}
-            reliableConnectionKeepAliveTimeout = 10000;
+            if (logger.isLoggingEnabled(LogWriter.TRACE_INFO)) {
+                logger.logInfo("Default value (840000 ms) will be used for reliableConnectionKeepAliveTimeout stack property");
+            }
+            reliableConnectionKeepAliveTimeout = 840000;
         }
-        logger.logError("value " + reliableConnectionKeepAliveTimeout + " will be used for reliableConnectionKeepAliveTimeout stack property");
+        if (logger.isLoggingEnabled(LogWriter.TRACE_INFO)) {
+            logger.logInfo("value " + reliableConnectionKeepAliveTimeout + " will be used for reliableConnectionKeepAliveTimeout stack property");
+        }
         this.reliableConnectionKeepAliveTimeout = reliableConnectionKeepAliveTimeout;
     }
 

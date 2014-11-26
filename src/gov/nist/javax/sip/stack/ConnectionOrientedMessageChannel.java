@@ -103,12 +103,8 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
     		keepAliveSemaphore = new Semaphore(1);
     	}
 
-        setKeepAliveTimeout(keepAliveTimeout);
+    	setKeepAliveTimeout(keepAliveTimeout);
         
-    	logger.logFatalError("@NJB new ConnectionOrientedMessageChannel created");
-    	//logger.logError("@@@ENH Hack- setting timer, so we reregister, etc");
-   		//KeepAliveTimeoutTimerTask pingKeepAliveTimeoutTask = new KeepAliveTimeoutTimerTask();
-   		//sipStack.getTimer().schedule(pingKeepAliveTimeoutTask, 1000);
 	}
 
     /**
@@ -179,7 +175,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                     && messageProcessor.getPort() == this.getPeerPort()
                     && messageProcessor.getTransport().equalsIgnoreCase(
                             this.getPeerProtocol())) {
-                logger.logError("@NJB processing SIP messages on port: " + messageProcessor.getPort());
                 Runnable processMessageTask = new Runnable() {
 
                     public void run() {
@@ -242,8 +237,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         sipMessage.setRemotePort(this.peerPort);
         sipMessage.setLocalAddress(this.getMessageProcessor().getIpAddress());
         sipMessage.setLocalPort(this.getPort());
-
-        logger.logFatalError("@@@JH2 Peer Address is: " + peerAddress);
         
         if (logger.isLoggingEnabled(
                 ServerLogger.TRACE_MESSAGES))
@@ -558,7 +551,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         // Create a pipeline to connect to our message parser.
         hispipe = new Pipeline(myClientInputStream, sipStack.readTimeout,
                 ((SIPTransactionStack) sipStack).getTimer());
-
         // Create a pipelined message parser to read and parse
         // messages that we write out to him.
         myParser = new PipelinedMsgParser(sipStack, this, hispipe,
@@ -588,9 +580,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                             close(true, false);
                         } catch (IOException ioex) {
                         }
-                        // This socket has not been closed cleanly - reopen
-                        // it.
-                        //connectionFailed();
                         return;
                     }
 
@@ -622,9 +611,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                     } catch (Exception ex1) {
                         // Do nothing.
                     }
-                    // This socket has not been closed cleanly - reopen
-                    // it.
-                    //connectionFailed();
                     return;
                 } catch (Exception ex) {
                     InternalErrorHandler.handleException(ex, logger);
@@ -639,8 +625,10 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
             	myParser.close();
             }
         }
+        
     }
 
+    
     protected void uncache() {
         if (isCached && !isRunning) {
         	((ConnectionOrientedMessageProcessor)this.messageProcessor).remove(this);
@@ -733,7 +721,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 	                        +  ", clientPort=" + peerPort+ ", timeout="+ keepAliveTimeout + ")");
 	    		}
 	    		sipStack.getTimer().cancel(pingKeepAliveTimeoutTask);
-	    		
 	    	} finally {
 	    		keepAliveSemaphore.release();
 	    	}
@@ -741,7 +728,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
     }
 
     public void setKeepAliveTimeout(long keepAliveTimeout) {
-        logger.logError("@NJB set keepalive timeout");
         if (keepAliveTimeout < 0){
             cancelPingKeepAliveTimeoutTaskIfStarted();
         }
@@ -773,7 +759,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
      * Schedules a heartbeat to occur at some point in the future. The time is
      * chosen randomly between the upper and lower bounds defined in the SIP
      * stack properties (recommendations are given in RFC5626 section 4.4.1)
-     * @@@JH2 need this
      */
     protected void rescheduleHeartbeat(boolean sendNow)
     {
@@ -792,8 +777,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
             heartbeatDelay = randomNumberGenerator.nextInt((upperBound - lowerBound) + 1) + lowerBound;
         }
         
-        logger.logFatalError("@@@JH2 Our heartbeat task is: " + sendHeartbeatTimerTask);
-        
         if (sendHeartbeatTimerTask == null)
         {
             sendHeartbeatTimerTask = new SendHeartbeatTimerTask();
@@ -803,8 +786,9 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         if (sendHeartbeatTimerTask.getSipTimerTask() != null)
             sipStackTimer.cancel(sendHeartbeatTimerTask);
 
-
-        logger.logError("@NJB  Scheduling heartbeat in " + heartbeatDelay + "s");
+        if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
+        	logger.logDebug("Scheduling CRLF heartbeat in " + heartbeatDelay + "s");
+        }
 
         sipStackTimer.schedule(sendHeartbeatTimerTask, heartbeatDelay*1000);
     }
@@ -841,9 +825,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 			return;
 		}
 		try{
-          logger.logError("@@@ ENH keep alive 2000");
-          keepAliveTimeout = 2000;
-
+			
 	        if(pingKeepAliveTimeoutTask == null) {
 	        	pingKeepAliveTimeoutTask = new KeepAliveTimeoutTimerTask();
 	        	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
@@ -872,34 +854,14 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         	keepAliveSemaphore.release();
         }
     }
-    
     class KeepAliveTimeoutTimerTask extends SIPStackTimerTask {
 
         public void runTask() {
-            logger.logError("@NJB ############################################\n" +
-                            "     Failed to get Heartbeat response\n" +
-                            "     ############################################");
         	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
         		logger.logDebug(
                         "~~~ Starting processing of KeepAliveTimeoutEvent( " + peerAddress.getHostAddress() + "," + peerPort + ")...");
         	}
         	close(true, true);
-
-          connectionFailed();
-        }
-    }
-
-    boolean connectionFailedCalled = false;
-    void connectionFailed()
-    {
-        if (connectionFailedCalled)
-        {
-            logger.logError("##################### Already called connection failed once");
-            return;
-        }
-
-        logger.logError("############# Failing connection");
-        connectionFailedCalled = true;
 
             if(sipStack instanceof SipStackImpl) {
 	            for (Iterator<SipProviderImpl> it = ((SipStackImpl)sipStack).getSipProviders(); it.hasNext();) {
@@ -923,11 +885,11 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 	                    peerAddress.getHostAddress(), peerPort, getTransport()));
 	            }
             }
+        }
     }
 
     /**
      * Timer task that sends a heartbeat on all available listening points
-     * @@@JH2 Need this
      */
     class SendHeartbeatTimerTask extends SIPStackTimerTask
     {
@@ -936,7 +898,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         {
             if (sipStack instanceof SipStackImpl)
             {
-            	logger.logError("@@@JH2 a new peerAddress: " + peerAddress);
                 Iterator<ListeningPoint> listeningPoints = ((SipStackImpl)sipStack).getListeningPoints();
 
                 while (listeningPoints.hasNext())

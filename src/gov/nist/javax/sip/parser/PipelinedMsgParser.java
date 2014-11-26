@@ -36,15 +36,31 @@ package gov.nist.javax.sip.parser;
  * life goes slower but more reliably.
  *
  */
-import gov.nist.core.*;
-import gov.nist.javax.sip.header.*;
-import gov.nist.javax.sip.message.*;
-import gov.nist.javax.sip.stack.*;
+import gov.nist.core.CommonLogger;
+import gov.nist.core.InternalErrorHandler;
+import gov.nist.core.LogLevels;
+import gov.nist.core.LogWriter;
+import gov.nist.core.StackLogger;
+import gov.nist.javax.sip.header.ContentLength;
+import gov.nist.javax.sip.message.SIPMessage;
+import gov.nist.javax.sip.stack.BlockingQueueDispatchAuditor;
+import gov.nist.javax.sip.stack.ConnectionOrientedMessageChannel;
+import gov.nist.javax.sip.stack.QueuedMessageDispatchBase;
+import gov.nist.javax.sip.stack.SIPTransactionStack;
 
-import java.io.*;
-import java.text.*;
-import java.util.*;
-import java.util.concurrent.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.text.ParseException;
+import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * This implements a pipelined message parser suitable for use with a stream -
@@ -337,21 +353,13 @@ public final class PipelinedMsgParser implements Runnable {
                             }
                             continue;
                         } else if(CRLF.equals(line1)) {
-                            byte[] bytes = line1.getBytes();
-                            String[] out = new String[bytes.length];
-                            for (int i = 0; i < bytes.length; i++)
-                            {
-                                out[i] = String.format("%02x", bytes[i]);
+                        	if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG)) {
+                            	logger.logDebug("Received CRLF");
                             }
-                            logger.logError("@NJB " + Arrays.toString(out));
-
-	                        	if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG)) {
-	                            	logger.logDebug("Received CRLF");
-	                            }
-	                        	if(sipMessageListener != null &&
-	                        			sipMessageListener instanceof ConnectionOrientedMessageChannel) {
-	                        		((ConnectionOrientedMessageChannel)sipMessageListener).cancelPingKeepAliveTimeoutTaskIfStarted();
-	                        	}
+                        	if(sipMessageListener != null &&
+                        			sipMessageListener instanceof ConnectionOrientedMessageChannel) {
+                        		((ConnectionOrientedMessageChannel)sipMessageListener).cancelPingKeepAliveTimeoutTaskIfStarted();
+                        	}
                         	continue;
                         } else
                             break;

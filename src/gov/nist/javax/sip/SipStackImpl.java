@@ -25,25 +25,38 @@
  */
 package gov.nist.javax.sip;
 
-import gov.nist.core.*;
+import gov.nist.core.CommonLogger;
+import gov.nist.core.LogLevels;
+import gov.nist.core.ServerLogger;
+import gov.nist.core.StackLogger;
 import gov.nist.core.net.*;
-import gov.nist.javax.sip.clientauthutils.*;
-import gov.nist.javax.sip.parser.*;
+import gov.nist.javax.sip.clientauthutils.AccountManager;
+import gov.nist.javax.sip.clientauthutils.AuthenticationHelper;
+import gov.nist.javax.sip.clientauthutils.AuthenticationHelperImpl;
+import gov.nist.javax.sip.clientauthutils.SecureAccountManager;
+import gov.nist.javax.sip.parser.MessageParserFactory;
+import gov.nist.javax.sip.parser.PostParseExecutorServices;
+import gov.nist.javax.sip.parser.StringMsgParser;
+import gov.nist.javax.sip.parser.StringMsgParserFactory;
 import gov.nist.javax.sip.stack.*;
-import gov.nist.javax.sip.stack.timers.*;
-
-import java.io.*;
-import java.lang.reflect.*;
-import java.net.*;
-import java.security.*;
-import java.util.*;
-import java.util.StringTokenizer;
-import java.util.concurrent.*;
+import gov.nist.javax.sip.stack.timers.DefaultSipTimer;
+import gov.nist.javax.sip.stack.timers.SipTimer;
 
 import javax.sip.*;
-import javax.sip.address.*;
-import javax.sip.header.*;
-import javax.sip.message.*;
+import javax.sip.address.Router;
+import javax.sip.header.HeaderFactory;
+import javax.sip.message.Request;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.net.InetAddress;
+import java.security.GeneralSecurityException;
+import java.util.*;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Implementation of SipStack.
@@ -1418,6 +1431,8 @@ public class SipStackImpl extends SIPTransactionStack implements
 				"gov.nist.javax.sip.SSL_RENEGOTIATION_ENABLED",
 				"true"));
 
+		// Set the heartbeat interval upperbound for CRLF polling. The lower 
+		// bound is 20% lower than this
 		int heartbeatUpperBound = Integer.parseInt(configurationProperties.getProperty(
 		                     "gov.nist.javax.sip.HEARTBEAT_UPPER_BOUND", "30"));
 		super.setHeartbeatUpperBound(heartbeatUpperBound);

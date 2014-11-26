@@ -28,16 +28,26 @@
  ******************************************************************************/
 package gov.nist.javax.sip.parser;
 
-import gov.nist.core.*;
-import gov.nist.javax.sip.message.*;
-import gov.nist.javax.sip.stack.*;
+import gov.nist.core.CommonLogger;
+import gov.nist.core.LogLevels;
+import gov.nist.core.LogWriter;
+import gov.nist.core.StackLogger;
+import gov.nist.javax.sip.message.SIPMessage;
+import gov.nist.javax.sip.stack.ConnectionOrientedMessageChannel;
+import gov.nist.javax.sip.stack.QueuedMessageDispatchBase;
+import gov.nist.javax.sip.stack.SIPTransactionStack;
 
-import java.io.*;
-import java.text.*;
-import java.util.*;
-import java.util.concurrent.*;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.text.ParseException;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Semaphore;
 
-import javax.sip.header.*;
+import javax.sip.header.CallIdHeader;
+import javax.sip.header.ContentLengthHeader;
 
 /**
  * This is a FSM that can parse a single stream of messages with they bodies and
@@ -249,7 +259,6 @@ public class NioPipelineParser {
 				if(isPreviousLineCRLF) {
             		// Handling keepalive ping (double CRLF) as defined per RFC 5626 Section 4.4.1
                 	// sending pong (single CRLF)
-				    logger.logError("Received Double CRLF");
                 	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
                         logger.logDebug("KeepAlive Double CRLF received, sending single CRLF as defined per RFC 5626 Section 4.4.1");
                         logger.logDebug("~~~ setting isPreviousLineCRLF=false");
@@ -265,7 +274,7 @@ public class NioPipelineParser {
             	} else {
             		crlfReceived = true;
                 	if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG)) {
-                    	logger.logError("Received CRLF");
+                    	logger.logDebug("Received CRLF");
                     }
                 	if(sipMessageListener != null &&
                 			sipMessageListener instanceof ConnectionOrientedMessageChannel) {

@@ -25,11 +25,17 @@
  */
 package gov.nist.javax.sip.stack;
 
-import gov.nist.core.*;
+import gov.nist.core.CommonLogger;
+import gov.nist.core.Host;
+import gov.nist.core.HostPort;
+import gov.nist.core.LogLevels;
+import gov.nist.core.LogWriter;
+import gov.nist.core.StackLogger;
 
-import java.net.*;
-import java.util.*;
-import java.util.concurrent.*;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author jean.deruelle@gmail.com
@@ -147,6 +153,7 @@ public abstract class ConnectionOrientedMessageProcessor extends MessageProcesso
     }
 
     public boolean setKeepAliveTimeout(String peerAddress, int peerPort, long keepAliveTimeout) {
+    	
         validatePortInRange(peerPort);
 
         HostPort hostPort  = new HostPort();

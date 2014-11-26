@@ -28,15 +28,21 @@
  *******************************************************************************/
 package gov.nist.javax.sip.stack;
 
-import gov.nist.core.*;
-import gov.nist.javax.sip.*;
+import gov.nist.core.CommonLogger;
+import gov.nist.core.LogLevels;
+import gov.nist.core.LogWriter;
+import gov.nist.core.StackLogger;
+import gov.nist.javax.sip.SipStackImpl;
 
-import java.io.*;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLSocket;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.*;
-import java.util.*;
-import java.util.concurrent.*;
-
-import javax.net.ssl.*;
+import java.util.Enumeration;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 /*
  * TLS support Added by Daniel J.Martinez Manzano <dani@dif.um.es>
@@ -288,7 +294,6 @@ public class IOHandler {
             try {
                 clientSock = getSocket(key);
                 while (retry_count < max_retry) {
-                    //logger.logError("@NJB retry_count " + retry_count + " of " + max_retry);
                     if (clientSock == null) {
                         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
                             logger.logDebug(
@@ -305,7 +310,6 @@ public class IOHandler {
                         try {
                             clientSock = sipStack.getNetworkLayer().createSocket(
                                     receiverAddress, contactPort, senderAddress);
-                            //logger.logError("@NJB created new client socket " + clientSock);
                         }
                         catch (SocketException e)
                         {
@@ -334,11 +338,6 @@ public class IOHandler {
                         putSocket(key, clientSock);
                         break;
                     } else {
-//                        if (clientSock.isClosed())
-//                        {
-//                            logger.logError("@NJB client socket is closed " + clientSock);
-//                        }
-
                         try {
                             OutputStream outputStream = clientSock
                                     .getOutputStream();

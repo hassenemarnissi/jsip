@@ -28,22 +28,60 @@
  ******************************************************************************/
 package gov.nist.javax.sip;
 
-import gov.nist.core.*;
+import gov.nist.core.CommonLogger;
+import gov.nist.core.InternalErrorHandler;
+import gov.nist.core.LogLevels;
+import gov.nist.core.LogWriter;
+import gov.nist.core.StackLogger;
 import gov.nist.javax.sip.DialogTimeoutEvent.Reason;
-import gov.nist.javax.sip.address.*;
-import gov.nist.javax.sip.header.*;
-import gov.nist.javax.sip.message.*;
-import gov.nist.javax.sip.stack.*;
+import gov.nist.javax.sip.address.RouterExt;
+import gov.nist.javax.sip.header.CallID;
+import gov.nist.javax.sip.header.Via;
+import gov.nist.javax.sip.message.RequestExt;
+import gov.nist.javax.sip.message.SIPMessage;
+import gov.nist.javax.sip.message.SIPRequest;
+import gov.nist.javax.sip.message.SIPResponse;
+import gov.nist.javax.sip.stack.HopImpl;
+import gov.nist.javax.sip.stack.MessageChannel;
+import gov.nist.javax.sip.stack.SIPClientTransaction;
+import gov.nist.javax.sip.stack.SIPDialog;
+import gov.nist.javax.sip.stack.SIPDialogErrorEvent;
+import gov.nist.javax.sip.stack.SIPDialogEventListener;
+import gov.nist.javax.sip.stack.SIPServerTransaction;
+import gov.nist.javax.sip.stack.SIPTransaction;
+import gov.nist.javax.sip.stack.SIPTransactionErrorEvent;
+import gov.nist.javax.sip.stack.SIPTransactionEventListener;
+import gov.nist.javax.sip.stack.SIPTransactionStack;
 
-import java.io.*;
-import java.text.*;
-import java.util.*;
-import java.util.concurrent.*;
+import java.io.IOException;
+import java.text.ParseException;
+import java.util.EventObject;
+import java.util.Iterator;
+import java.util.TooManyListenersException;
+import java.util.concurrent.ConcurrentHashMap;
 
-import javax.sip.*;
-import javax.sip.address.*;
-import javax.sip.header.*;
-import javax.sip.message.*;
+import javax.sip.ClientTransaction;
+import javax.sip.Dialog;
+import javax.sip.DialogState;
+import javax.sip.InvalidArgumentException;
+import javax.sip.ListeningPoint;
+import javax.sip.ObjectInUseException;
+import javax.sip.RequestEvent;
+import javax.sip.ResponseEvent;
+import javax.sip.ServerTransaction;
+import javax.sip.SipException;
+import javax.sip.SipListener;
+import javax.sip.SipStack;
+import javax.sip.Timeout;
+import javax.sip.TimeoutEvent;
+import javax.sip.Transaction;
+import javax.sip.TransactionAlreadyExistsException;
+import javax.sip.TransactionState;
+import javax.sip.TransactionUnavailableException;
+import javax.sip.address.Hop;
+import javax.sip.header.CallIdHeader;
+import javax.sip.message.Request;
+import javax.sip.message.Response;
 
 /*
  * Contributions (bug fixes) made by: Daniel J. Martinez Manzano, Hagai Sela.
@@ -77,11 +115,6 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
     private boolean automaticDialogSupportEnabled ;
 
     private boolean dialogErrorsAutomaticallyHandled = true;
-
-    /**
-     * The registrar for this provider
-     */
-    //private SipListener registrar;
 
     private SipProviderImpl() {
 
@@ -1092,23 +1125,5 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
         return sipListener;
     }
 
-//    @Override
-//    public void setRegistrar(SipListener registrar)
-//    {
-//        logger.logError("@NJB Setting registrar for provider " + this + " as " + registrar);
-//        this.registrar = registrar;
-//    }
 
-//    /**
-//     * Notifies the SIP registrar that the connection has failed so it can
-//     * re-register if necessary
-//     */
-//    public void handleConnectionFailed()
-//    {
-//        logger.logError("@NJB Notifying registrar " + registrar + " that the connection has failed");
-//        if (registrar != null)
-//        {
-//            registrar.processIOException(null);
-//        }
-//    }
 }
