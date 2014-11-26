@@ -382,7 +382,7 @@ public abstract class SIPTransactionStack implements
 
     public long nioSocketMaxIdleTime;
 
-    protected boolean aggressiveCleanup = true;
+    protected boolean aggressiveCleanup = false;
 
     public SIPMessageValve sipMessageValve;
 

@@ -25,23 +25,41 @@
  */
 package gov.nist.javax.sip.stack;
 
-import gov.nist.core.*;
-import gov.nist.javax.sip.*;
+import gov.nist.core.CommonLogger;
+import gov.nist.core.InternalErrorHandler;
+import gov.nist.core.LogWriter;
+import gov.nist.core.ServerLogger;
+import gov.nist.core.StackLogger;
+import gov.nist.javax.sip.IOExceptionEventExt;
 import gov.nist.javax.sip.IOExceptionEventExt.Reason;
-import gov.nist.javax.sip.header.*;
-import gov.nist.javax.sip.message.*;
-import gov.nist.javax.sip.parser.*;
-import gov.nist.javax.sip.stack.timers.*;
+import gov.nist.javax.sip.ListeningPointExt;
+import gov.nist.javax.sip.SipListenerExt;
+import gov.nist.javax.sip.SipProviderImpl;
+import gov.nist.javax.sip.SipStackImpl;
+import gov.nist.javax.sip.header.RetryAfter;
+import gov.nist.javax.sip.header.Via;
+import gov.nist.javax.sip.header.ViaList;
+import gov.nist.javax.sip.message.SIPMessage;
+import gov.nist.javax.sip.message.SIPRequest;
+import gov.nist.javax.sip.message.SIPResponse;
+import gov.nist.javax.sip.parser.Pipeline;
+import gov.nist.javax.sip.parser.PipelinedMsgParser;
+import gov.nist.javax.sip.parser.SIPMessageListener;
+import gov.nist.javax.sip.stack.timers.SipTimer;
 
-import java.io.*;
-import java.net.*;
-import java.text.*;
-import java.util.*;
-import java.util.concurrent.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.text.ParseException;
+import java.util.Iterator;
+import java.util.Random;
+import java.util.concurrent.Semaphore;
 
-import javax.sip.*;
-import javax.sip.address.*;
-import javax.sip.message.*;
+import javax.sip.ListeningPoint;
+import javax.sip.SipListener;
+import javax.sip.address.Hop;
+import javax.sip.message.Response;
 
 /**
  * @author jean.deruelle@gmail.com
@@ -568,7 +586,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                     int nbytes = myClientInputStream.read(msg, 0, bufferSize);
                     // no more bytes to read...
                     if (nbytes == -1) {
-                        //hispipe.write("\r\n\r\n".getBytes("UTF-8"));
+                        hispipe.write("\r\n\r\n".getBytes("UTF-8"));
                         try {
                             if (sipStack.maxConnections != -1) {
                                 synchronized (messageProcessor) {
@@ -799,8 +817,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 
         long newScheduledTime =  lastKeepAliveReceivedTimeOrNow + newKeepAliveTimeout;
 
-        logger.logError("NJB rescheduling keepalive timeout");
-
         StringBuilder methodLog = new StringBuilder();
 
         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
@@ -915,10 +931,12 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                                                    peerAddress.getHostAddress(),
                                                    peerPort);
 
-                            if (mySock != null)
-                                logger.logError("@NJB Sent heartbeat from port: " + mySock.getLocalPort());
-                            else
-                                logger.logError("@NJB Sent hearbeat");
+                            if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
+                            	if (mySock != null)
+                            		logger.logDebug("Sent heartbeat from port: " + mySock.getLocalPort());
+                            	else
+                            		logger.logDebug("Sent hearbeat");
+                            }
                         }
                         catch (IOException ex)
                         {

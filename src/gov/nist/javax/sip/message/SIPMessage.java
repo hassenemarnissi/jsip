@@ -1952,12 +1952,11 @@ public abstract class SIPMessage extends MessageObject implements javax.sip.mess
 
     /**
      * Set a flag to indiate this is a special message ( encoded with CRLFCRLF ).
-     * Also set the null request transport type
+     * 
      */
     public void setNullRequest() {
         this.nullRequest = true;
     }
-    
     public String getForkId() {
         if ( this.forkId != null ) {
             return forkId;
