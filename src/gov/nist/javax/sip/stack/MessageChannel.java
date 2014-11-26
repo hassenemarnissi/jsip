@@ -389,7 +389,7 @@ public abstract class MessageChannel {
     public void logMessage(SIPMessage sipMessage, InetAddress address, int port, long time) {
         if (!logger.isLoggingEnabled(ServerLogger.TRACE_MESSAGES))
             return;
-
+        
         // Default port.
         if (port == -1)
             port = 5060;

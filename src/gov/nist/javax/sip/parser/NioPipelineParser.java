@@ -264,12 +264,12 @@ public class NioPipelineParser {
 					}
             	} else {
             		crlfReceived = true;
-                	//if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG)) {
+                	if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG)) {
                     	logger.logError("Received CRLF");
-                    //}
+                    }
                 	if(sipMessageListener != null &&
                 			sipMessageListener instanceof ConnectionOrientedMessageChannel) {
-                		((ConnectionOrientedMessageChannel)sipMessageListener).cancelPingKeepAliveTimeoutTaskIfStarted(true);
+                		((ConnectionOrientedMessageChannel)sipMessageListener).cancelPingKeepAliveTimeoutTaskIfStarted();
                 	}
             	}
 				if(message.length() > 0) { // if we havent read any headers yet we are between messages and ignore CRLFs

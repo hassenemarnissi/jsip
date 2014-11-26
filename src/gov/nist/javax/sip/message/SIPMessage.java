@@ -141,6 +141,7 @@ public abstract class SIPMessage extends MessageObject implements javax.sip.mess
      * True if this is a null request.
      */
     protected boolean nullRequest;
+    protected String nullTransport;
 
     /**
      * unparsed headers
@@ -1950,12 +1951,18 @@ public abstract class SIPMessage extends MessageObject implements javax.sip.mess
         return  this.nullRequest;
     }
 
+    public String getNullTransport()
+    {
+    	return nullTransport;
+    }
+
     /**
      * Set a flag to indiate this is a special message ( encoded with CRLFCRLF ).
      *
      */
-    public void setNullRequest() {
+    public void setNullRequest(String transport) {
         this.nullRequest = true;
+        this.nullTransport = transport;
     }
     public String getForkId() {
         if ( this.forkId != null ) {

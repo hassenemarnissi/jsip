@@ -1419,7 +1419,7 @@ public class SipStackImpl extends SIPTransactionStack implements
 				"true"));
 
 		int heartbeatUpperBound = Integer.parseInt(configurationProperties.getProperty(
-		                    "gov.nist.javax.sip.HEARTBEAT_UPPER_BOUND", "120"));
+		                     "gov.nist.javax.sip.HEARTBEAT_UPPER_BOUND", "30"));
 		super.setHeartbeatUpperBound(heartbeatUpperBound);
 
 		setSslRenegotiationEnabled(sslRenegotiationEnabled);

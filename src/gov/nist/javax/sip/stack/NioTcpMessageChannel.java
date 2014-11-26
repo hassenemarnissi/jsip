@@ -236,7 +236,7 @@ public class NioTcpMessageChannel extends ConnectionOrientedMessageChannel {
 				((ConnectionOrientedMessageProcessor) this.messageProcessor).remove(this);
 			}
 			if(stopKeepAliveTask) {
-				cancelPingKeepAliveTimeoutTaskIfStarted(false);
+				cancelPingKeepAliveTimeoutTaskIfStarted();
 			}
 		} catch (IOException e) {
 			logger.logError("Problem occured while closing", e);

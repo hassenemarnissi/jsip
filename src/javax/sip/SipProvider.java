@@ -546,11 +546,11 @@ public interface SipProvider {
      */
     public void setAutomaticDialogSupportEnabled(boolean flag);
 
-    /**
-     * Sets the registrar for this provider.
-     *
-     * @param registrar the registrar for this provider
-     */
-    public void setRegistrar(SipListener registrar);
+//    /**
+//     * Sets the registrar for this provider.
+//     *
+//     * @param registrar the registrar for this provider
+//     */
+//    public void setRegistrar(SipListener registrar);
 }
 

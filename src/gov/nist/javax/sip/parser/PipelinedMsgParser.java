@@ -350,7 +350,7 @@ public final class PipelinedMsgParser implements Runnable {
 	                            }
 	                        	if(sipMessageListener != null &&
 	                        			sipMessageListener instanceof ConnectionOrientedMessageChannel) {
-	                        		((ConnectionOrientedMessageChannel)sipMessageListener).cancelPingKeepAliveTimeoutTaskIfStarted(true);
+	                        		((ConnectionOrientedMessageChannel)sipMessageListener).cancelPingKeepAliveTimeoutTaskIfStarted();
 	                        	}
                         	continue;
                         } else

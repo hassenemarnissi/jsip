@@ -68,6 +68,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
     	super(sipStack);
 
         // Start the keep alive process by scheduling a heartbeat
+    	logger.logFatalError("@@@JH2 starting process");
         rescheduleHeartbeat(true);
     }
 
@@ -207,7 +208,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
             }
         }
         if(stopKeepAliveTask) {
-			cancelPingKeepAliveTimeoutTaskIfStarted(false);
+			cancelPingKeepAliveTimeoutTaskIfStarted();
 		}
 
     }

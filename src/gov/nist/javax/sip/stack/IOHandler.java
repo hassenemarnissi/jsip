@@ -288,7 +288,7 @@ public class IOHandler {
             try {
                 clientSock = getSocket(key);
                 while (retry_count < max_retry) {
-                    logger.logError("@NJB retry_count " + retry_count + " of " + max_retry);
+                    //logger.logError("@NJB retry_count " + retry_count + " of " + max_retry);
                     if (clientSock == null) {
                         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
                             logger.logDebug(
@@ -305,7 +305,7 @@ public class IOHandler {
                         try {
                             clientSock = sipStack.getNetworkLayer().createSocket(
                                     receiverAddress, contactPort, senderAddress);
-                            logger.logError("@NJB created new client socket " + clientSock);
+                            //logger.logError("@NJB created new client socket " + clientSock);
                         }
                         catch (SocketException e)
                         {
@@ -334,10 +334,10 @@ public class IOHandler {
                         putSocket(key, clientSock);
                         break;
                     } else {
-                        if (clientSock.isClosed())
-                        {
-                            logger.logError("@NJB client socket is closed " + clientSock);
-                        }
+//                        if (clientSock.isClosed())
+//                        {
+//                            logger.logError("@NJB client socket is closed " + clientSock);
+//                        }
 
                         try {
                             OutputStream outputStream = clientSock
