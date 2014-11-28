@@ -121,8 +121,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
     		keepAliveSemaphore = new Semaphore(1);
     	}
 
-    	setKeepAliveTimeout(keepAliveTimeout);
-        
+    	setKeepAliveTimeout(keepAliveTimeout);   
 	}
 
     /**
@@ -605,12 +604,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 
                 } catch (IOException ex) {
                     // Terminate the message.
-//                    try {
-//                        hispipe.write("\r\n\r\n".getBytes("UTF-8"));
-//                    } catch (Exception e) {
-//                        // InternalErrorHandler.handleException(e);
-//                    }
-
                     try {
                         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
                             logger.logDebug(
@@ -784,8 +777,14 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 
         // We can't reschedule if we don't have a timer
         if (sipStackTimer == null)
+        {
+        	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) 
+        	{
+            	logger.logDebug("No timer so can't schedule CRLF heartbeat");
+            }
             return;
-
+        }
+        
         int heartbeatDelay = 0;
         if (!sendNow)
         {
@@ -804,9 +803,8 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         if (sendHeartbeatTimerTask.getSipTimerTask() != null)
             sipStackTimer.cancel(sendHeartbeatTimerTask);
 
-        if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
+        if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) 
         	logger.logDebug("Scheduling CRLF heartbeat in " + heartbeatDelay + "s");
-        }
 
         sipStackTimer.schedule(sendHeartbeatTimerTask, heartbeatDelay*1000);
     }
@@ -833,7 +831,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
             methodLog.append(newScheduledTime);
         }
         
-//      long delay = newScheduledTime > now ? newScheduledTime - now : 1;
         try {
 			keepAliveSemaphore.acquire();
 		} catch (InterruptedException e) {
@@ -886,7 +883,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 	                ListeningPoint[] listeningPoints = nextProvider.getListeningPoints();
 	                for(ListeningPoint listeningPoint : listeningPoints) {
 		            	if(sipListener!= null && sipListener instanceof SipListenerExt
-		            			// making sure that we don't notify each listening point but only the one on which the timeout happened
+		            			// Make sure that we don't notify each listening point but only the one on which the timeout happened
 		            			&& listeningPoint.getIPAddress().equalsIgnoreCase(myAddress) && listeningPoint.getPort() == myPort &&
 		            				listeningPoint.getTransport().equalsIgnoreCase(getTransport())) {
 		            		((SipListenerExt)sipListener).processIOException(new IOExceptionEventExt(nextProvider, Reason.KeepAliveTimeout, myAddress, myPort,

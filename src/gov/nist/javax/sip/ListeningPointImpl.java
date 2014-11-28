@@ -254,7 +254,7 @@ public class ListeningPointImpl implements javax.sip.ListeningPoint, gov.nist.ja
         targetHostPort.setPort(port);
         MessageChannel messageChannel = this.messageProcessor.createMessageChannel(targetHostPort);
         SIPRequest siprequest = new SIPRequest();
-        siprequest.setNullRequest();
+        siprequest.setNullRequest(messageChannel.getMessageProcessor().getTransport());
 
         if(messageChannel instanceof ConnectionOrientedMessageChannel) {
         	// RFC 5626 : schedule the keepaive timeout to make sure we receive a pong response and notify the app if not

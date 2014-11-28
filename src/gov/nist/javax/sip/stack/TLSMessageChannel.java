@@ -131,6 +131,9 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
         super.messageProcessor = msgProcessor;
         // Can drop this after response is sent potentially.
         mythread.start();
+
+        // Start the keep alive process by scheduling a heartbeat
+        rescheduleHeartbeat(true);
     }
 
     /**
@@ -163,6 +166,9 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
         this.myAddress = messageProcessor.getIpAddress().getHostAddress();
         this.key = MessageChannel.getKey(peerAddress, peerPort, "TLS");
         super.messageProcessor = messageProcessor;
+
+        // Start the keep alive process by scheduling a heartbeat
+        rescheduleHeartbeat(true);
 
     }   
 

@@ -227,7 +227,7 @@ public class NioPipelineParser {
 			if(currentStreamEnded) break; // The stream ends when we have read all bytes in the chunk NIO passed to us
 			else {
 				if(readingHeaderLines) {// We are in state to read header lines right now
-					isPreviousLineCRLF = readMessageSipHeaderLines(inputStream, isPreviousLineCRLF);
+					readMessageSipHeaderLines(inputStream);
 				}
 				if(readingMessageBodyContents) { // We've already read the headers an now we are reading the Contents of the SIP message (which doesn't generally have lines)
 					readMessageBody(inputStream);
@@ -236,8 +236,7 @@ public class NioPipelineParser {
 		}
 	}
 
-	private boolean readMessageSipHeaderLines(InputStream inputStream, boolean isPreviousLineCRLF) throws IOException {
-		boolean crlfReceived = false;
+	private void readMessageSipHeaderLines(InputStream inputStream) throws IOException {
 		String line = readLine(inputStream); // This gives us a full line or if it didn't fit in the byte check it may give us part of the line
 		if(partialLineRead) {
 			partialLine = partialLine + line; // If we are reading partial line again we must concatenate it with the previous partial line to reconstruct the full line
@@ -256,31 +255,15 @@ public class NioPipelineParser {
 							CallIdHeader.NAME.length()+1).trim();
 				}
 			} else {
-				if(isPreviousLineCRLF) {
-            		// Handling keepalive ping (double CRLF) as defined per RFC 5626 Section 4.4.1
-                	// sending pong (single CRLF)
-                	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
-                        logger.logDebug("KeepAlive Double CRLF received, sending single CRLF as defined per RFC 5626 Section 4.4.1");
-                        logger.logDebug("~~~ setting isPreviousLineCRLF=false");
-                    }
-
-                	crlfReceived = false;
-
-                	try {
-						sipMessageListener.sendSingleCLRF();
-					} catch (Exception e) {
-						logger.logError("A problem occured while trying to send a single CLRF in response to a double CLRF", e);
-					}
-            	} else {
-            		crlfReceived = true;
-                	if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG)) {
-                    	logger.logDebug("Received CRLF");
-                    }
-                	if(sipMessageListener != null &&
-                			sipMessageListener instanceof ConnectionOrientedMessageChannel) {
-                		((ConnectionOrientedMessageChannel)sipMessageListener).cancelPingKeepAliveTimeoutTaskIfStarted();
-                	}
+            	if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG)) {
+                	logger.logDebug("Received CRLF");
+                }
+            	
+            	if(sipMessageListener != null &&
+            			sipMessageListener instanceof ConnectionOrientedMessageChannel) {
+            		((ConnectionOrientedMessageChannel)sipMessageListener).cancelPingKeepAliveTimeoutTaskIfStarted();
             	}
+            	
 				if(message.length() > 0) { // if we havent read any headers yet we are between messages and ignore CRLFs
 					readingMessageBodyContents = true;
 					readingHeaderLines = false;
@@ -295,7 +278,6 @@ public class NioPipelineParser {
 				}
 			}
 		}
-		return crlfReceived;
 	}
 
 	// This method must be called repeatedly until the inputStream returns -1 or some error conditions is triggered
