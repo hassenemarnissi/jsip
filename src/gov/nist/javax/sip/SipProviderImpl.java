@@ -115,6 +115,11 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
     private boolean automaticDialogSupportEnabled ;
 
     private boolean dialogErrorsAutomaticallyHandled = true;
+    
+    /**
+     * The registrar for this provider
+     */
+    private SipListener registrar;
 
     private SipProviderImpl() {
 
@@ -1125,5 +1130,23 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
         return sipListener;
     }
 
+	@Override
+    public void setRegistrar(SipListener registrar)
+    {
+        logger.logError("@NJB Setting registrar for provider " + this + " as " + registrar);
+        this.registrar = registrar;
+    }
 
+    /**
+     * Notifies the SIP registrar that the connection has failed so it can
+     * re-register if necessary
+     */
+    public void handleConnectionFailed()
+    {
+        logger.logError("@NJB Notifying registrar " + registrar + " that the connection has failed");
+        if (registrar != null)
+        {
+            registrar.processIOException(null);
+        }
+    }
 }
