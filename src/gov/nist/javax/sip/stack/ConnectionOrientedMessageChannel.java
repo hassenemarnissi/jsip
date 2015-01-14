@@ -594,9 +594,11 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                                 }
                             }
                             hispipe.close();
-                            close(true, false);
+                            logger.logError("### JH2 closing with a false 1 ###");
+                            close(true, true);
                         } catch (IOException ioex) {
                         }
+                        connectionFailed();
                         return;
                     }
 
@@ -617,6 +619,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                             }
                             close(true, false);
                             hispipe.close();
+                            logger.logError("### JH2 closing with a false 2 ###");
                         } catch (IOException ioex) {
                         }
                     } catch (Exception ex1) {
@@ -867,6 +870,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         	keepAliveSemaphore.release();
         }
     }
+    
     class KeepAliveTimeoutTimerTask extends SIPStackTimerTask {
 
         public void runTask() {
@@ -875,28 +879,37 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                         "~~~ Starting processing of KeepAliveTimeoutEvent( " + peerAddress.getHostAddress() + "," + peerPort + ")...");
         	}
         	close(true, true);
+        	
+        	connectionFailed();
+        }
+    }
+    
+    private void connectionFailed() {
+        	
+    	logger.logError("### JH2 timer task hit");
 
-            if(sipStack instanceof SipStackImpl) {
-	            for (Iterator<SipProviderImpl> it = ((SipStackImpl)sipStack).getSipProviders(); it.hasNext();) {
-	                SipProviderImpl nextProvider = (SipProviderImpl) it.next();
-	                SipListener sipListener= nextProvider.getSipListener();
-	                ListeningPoint[] listeningPoints = nextProvider.getListeningPoints();
-	                for(ListeningPoint listeningPoint : listeningPoints) {
-		            	if(sipListener!= null && sipListener instanceof SipListenerExt
-		            			// Make sure that we don't notify each listening point but only the one on which the timeout happened
-		            			&& listeningPoint.getIPAddress().equalsIgnoreCase(myAddress) && listeningPoint.getPort() == myPort &&
-		            				listeningPoint.getTransport().equalsIgnoreCase(getTransport())) {
-		            		((SipListenerExt)sipListener).processIOException(new IOExceptionEventExt(nextProvider, Reason.KeepAliveTimeout, myAddress, myPort,
-		            				peerAddress.getHostAddress(), peerPort, getTransport()));
-		                }
+        if(sipStack instanceof SipStackImpl) {
+            for (Iterator<SipProviderImpl> it = ((SipStackImpl)sipStack).getSipProviders(); it.hasNext();) {
+                SipProviderImpl nextProvider = (SipProviderImpl) it.next();
+                SipListener sipListener= nextProvider.getSipListener();
+                ListeningPoint[] listeningPoints = nextProvider.getListeningPoints();
+                for(ListeningPoint listeningPoint : listeningPoints) {
+	            	if(sipListener!= null && sipListener instanceof SipListenerExt
+	            			// Make sure that we don't notify each listening point but only the one on which the timeout happened
+	            			&& listeningPoint.getIPAddress().equalsIgnoreCase(myAddress) && listeningPoint.getPort() == myPort &&
+	            				listeningPoint.getTransport().equalsIgnoreCase(getTransport())) {
+	            		((SipListenerExt)sipListener).processIOException(new IOExceptionEventExt(nextProvider, Reason.KeepAliveTimeout, myAddress, myPort,
+	            				peerAddress.getHostAddress(), peerPort, getTransport()));
 	                }
-	            }
-            } else {
-	            SipListener sipListener = sipStack.getSipListener();
-	            if(sipListener instanceof SipListenerExt) {
-	            	((SipListenerExt)sipListener).processIOException(new IOExceptionEventExt(this, Reason.KeepAliveTimeout, myAddress, myPort,
-	                    peerAddress.getHostAddress(), peerPort, getTransport()));
-	            }
+                }
+                nextProvider.handleConnectionFailed();
+                logger.logError("### JH2 connection failed ###");
+            }
+        } else {
+            SipListener sipListener = sipStack.getSipListener();
+            if(sipListener instanceof SipListenerExt) {
+            	((SipListenerExt)sipListener).processIOException(new IOExceptionEventExt(this, Reason.KeepAliveTimeout, myAddress, myPort,
+                    peerAddress.getHostAddress(), peerPort, getTransport()));
             }
         }
     }

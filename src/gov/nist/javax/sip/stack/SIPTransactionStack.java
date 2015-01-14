@@ -3187,9 +3187,9 @@ public abstract class SIPTransactionStack implements
         if (reliableConnectionKeepAliveTimeout == 0){
 
             if (logger.isLoggingEnabled(LogWriter.TRACE_INFO)) {
-                logger.logInfo("Default value (840000 ms) will be used for reliableConnectionKeepAliveTimeout stack property");
+                logger.logInfo("Default value (1000 ms) will be used for reliableConnectionKeepAliveTimeout stack property");
             }
-            reliableConnectionKeepAliveTimeout = 840000;
+            reliableConnectionKeepAliveTimeout = 1000;
         }
         if (logger.isLoggingEnabled(LogWriter.TRACE_INFO)) {
             logger.logInfo("value " + reliableConnectionKeepAliveTimeout + " will be used for reliableConnectionKeepAliveTimeout stack property");

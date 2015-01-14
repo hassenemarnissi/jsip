@@ -213,6 +213,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
             }
         }
         if(stopKeepAliveTask) {
+        	logger.logError("### JH2 timer cancelled");
 			cancelPingKeepAliveTimeoutTaskIfStarted();
 		}
 
