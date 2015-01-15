@@ -1130,10 +1130,9 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
         return sipListener;
     }
 
-	@Override
+    @Override
     public void setRegistrar(SipListener registrar)
     {
-        logger.logError("@NJB Setting registrar for provider " + this + " as " + registrar);
         this.registrar = registrar;
     }
 
@@ -1143,7 +1142,7 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
      */
     public void handleConnectionFailed()
     {
-        logger.logError("@NJB Notifying registrar " + registrar + " that the connection has failed");
+        logger.logInfo("Notifying the registrar " + registrar + " that the connection has failed");
         if (registrar != null)
         {
             registrar.processIOException(null);

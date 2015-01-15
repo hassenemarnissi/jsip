@@ -258,12 +258,10 @@ public class NioPipelineParser {
             	if (logger.isLoggingEnabled(LogLevels.TRACE_DEBUG)) {
                 	logger.logDebug("Received CRLF");
                 }
-            	
             	if(sipMessageListener != null &&
             			sipMessageListener instanceof ConnectionOrientedMessageChannel) {
             		((ConnectionOrientedMessageChannel)sipMessageListener).cancelPingKeepAliveTimeoutTaskIfStarted();
             	}
-            	
 				if(message.length() > 0) { // if we havent read any headers yet we are between messages and ignore CRLFs
 					readingMessageBodyContents = true;
 					readingHeaderLines = false;

@@ -594,10 +594,11 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                                 }
                             }
                             hispipe.close();
-                            logger.logError("### JH2 closing with a false 1 ###");
                             close(true, true);
                         } catch (IOException ioex) {
                         }
+                        
+                        // No response received, we need to reconnect
                         connectionFailed();
                         return;
                     }
@@ -619,7 +620,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                             }
                             close(true, false);
                             hispipe.close();
-                            logger.logError("### JH2 closing with a false 2 ###");
                         } catch (IOException ioex) {
                         }
                     } catch (Exception ex1) {
@@ -812,6 +812,10 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         sipStackTimer.schedule(sendHeartbeatTimerTask, heartbeatDelay*1000);
     }
 
+    /**
+     * Reschedule the keep alive timeout for the provided interval
+     * @param newKeepAliveTimeout 
+     */
     public void rescheduleKeepAliveTimeout(long newKeepAliveTimeout) {
         long now = System.currentTimeMillis();
         long lastKeepAliveReceivedTimeOrNow = lastKeepAliveReceivedTime == 0 ? now : lastKeepAliveReceivedTime;
@@ -884,9 +888,11 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         }
     }
     
+    /**
+     * Triggers error handling when the connection fails
+     */
     private void connectionFailed() {
-        	
-    	logger.logError("### JH2 timer task hit");
+    	logger.logError("Handling failed connection");
 
         if(sipStack instanceof SipStackImpl) {
             for (Iterator<SipProviderImpl> it = ((SipStackImpl)sipStack).getSipProviders(); it.hasNext();) {
@@ -903,7 +909,6 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 	                }
                 }
                 nextProvider.handleConnectionFailed();
-                logger.logError("### JH2 connection failed ###");
             }
         } else {
             SipListener sipListener = sipStack.getSipListener();
