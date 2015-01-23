@@ -889,7 +889,9 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
     }
     
     /**
-     * Triggers error handling when the connection fails
+     * Triggers error handling when the connection fails. This is normally due
+     * to a Perimeta failover and we need to trigger a re-register and also
+     * re-invite all calls
      */
     private void connectionFailed() {
     	logger.logError("Handling failed connection");
@@ -908,6 +910,8 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 	            				peerAddress.getHostAddress(), peerPort, getTransport()));
 	                }
                 }
+                
+                // Trigger the Perimeta failover handling
                 nextProvider.handleConnectionFailed();
             }
         } else {

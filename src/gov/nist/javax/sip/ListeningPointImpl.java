@@ -254,6 +254,9 @@ public class ListeningPointImpl implements javax.sip.ListeningPoint, gov.nist.ja
         targetHostPort.setPort(port);
         MessageChannel messageChannel = this.messageProcessor.createMessageChannel(targetHostPort);
         SIPRequest siprequest = new SIPRequest();
+        
+        // Set this as a NullRequest and provide the transport so it can be 
+        // logged correctly
         siprequest.setNullRequest(messageChannel.getMessageProcessor().getTransport());
 
         if(messageChannel instanceof ConnectionOrientedMessageChannel) {

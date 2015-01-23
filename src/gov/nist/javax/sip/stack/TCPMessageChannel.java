@@ -100,7 +100,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
     protected TCPMessageChannel(Socket sock, SIPTransactionStack sipStack,
             TCPMessageProcessor msgProcessor, String threadName) throws IOException {
 
-    	super(sipStack);
+    	this(sipStack);
         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
             logger.logDebug(
                     "creating new TCPMessageChannel ");
@@ -213,7 +213,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
             }
         }
         if(stopKeepAliveTask) {
-        	logger.logError("### JH2 timer cancelled");
+        	logger.logDebug("Cancelling Keep Alive Timeout Task");
 			cancelPingKeepAliveTimeoutTaskIfStarted();
 		}
 

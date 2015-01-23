@@ -3335,6 +3335,10 @@ public abstract class SIPTransactionStack implements
         return heartbeatUpperBound;
     }
 
+    /**
+     * Set the upper bound of the heartbeat timer
+     * @param upperBound the new upper bound
+     */
     public void setHeartbeatUpperBound(int upperBound)
     {
         heartbeatUpperBound = upperBound;
