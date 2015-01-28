@@ -599,7 +599,12 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                         }
                         
                         // No response received, we need to reconnect
-                        connectionFailed();
+                        if(sipStack instanceof SipStackImpl) {
+                            for (Iterator<SipProviderImpl> it = ((SipStackImpl)sipStack).getSipProviders(); it.hasNext();) {
+                            	SipProviderImpl nextProvider = (SipProviderImpl) it.next();
+                            	nextProvider.handleConnectionFailed();
+                            }
+                        }
                         return;
                     }
 
@@ -883,43 +888,29 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                         "~~~ Starting processing of KeepAliveTimeoutEvent( " + peerAddress.getHostAddress() + "," + peerPort + ")...");
         	}
         	close(true, true);
-        	
-        	connectionFailed();
-        }
-    }
-    
-    /**
-     * Triggers error handling when the connection fails. This is normally due
-     * to a Perimeta failover and we need to trigger a re-register and also
-     * re-invite all calls
-     */
-    private void connectionFailed() {
-    	logger.logError("Handling failed connection");
 
-        if(sipStack instanceof SipStackImpl) {
-            for (Iterator<SipProviderImpl> it = ((SipStackImpl)sipStack).getSipProviders(); it.hasNext();) {
-                SipProviderImpl nextProvider = (SipProviderImpl) it.next();
-                SipListener sipListener= nextProvider.getSipListener();
-                ListeningPoint[] listeningPoints = nextProvider.getListeningPoints();
-                for(ListeningPoint listeningPoint : listeningPoints) {
-	            	if(sipListener!= null && sipListener instanceof SipListenerExt
-	            			// Make sure that we don't notify each listening point but only the one on which the timeout happened
-	            			&& listeningPoint.getIPAddress().equalsIgnoreCase(myAddress) && listeningPoint.getPort() == myPort &&
-	            				listeningPoint.getTransport().equalsIgnoreCase(getTransport())) {
-	            		((SipListenerExt)sipListener).processIOException(new IOExceptionEventExt(nextProvider, Reason.KeepAliveTimeout, myAddress, myPort,
-	            				peerAddress.getHostAddress(), peerPort, getTransport()));
+	        if(sipStack instanceof SipStackImpl) {
+	            for (Iterator<SipProviderImpl> it = ((SipStackImpl)sipStack).getSipProviders(); it.hasNext();) {
+	                SipProviderImpl nextProvider = (SipProviderImpl) it.next();
+	                SipListener sipListener= nextProvider.getSipListener();
+	                ListeningPoint[] listeningPoints = nextProvider.getListeningPoints();
+	                for(ListeningPoint listeningPoint : listeningPoints) {
+		            	if(sipListener!= null && sipListener instanceof SipListenerExt
+		            			// Make sure that we don't notify each listening point but only the one on which the timeout happened
+		            			&& listeningPoint.getIPAddress().equalsIgnoreCase(myAddress) && listeningPoint.getPort() == myPort &&
+		            				listeningPoint.getTransport().equalsIgnoreCase(getTransport())) {
+		            		((SipListenerExt)sipListener).processIOException(new IOExceptionEventExt(nextProvider, Reason.KeepAliveTimeout, myAddress, myPort,
+		            				peerAddress.getHostAddress(), peerPort, getTransport()));
+		                }
 	                }
-                }
-                
-                // Trigger the Perimeta failover handling
-                nextProvider.handleConnectionFailed();
-            }
-        } else {
-            SipListener sipListener = sipStack.getSipListener();
-            if(sipListener instanceof SipListenerExt) {
-            	((SipListenerExt)sipListener).processIOException(new IOExceptionEventExt(this, Reason.KeepAliveTimeout, myAddress, myPort,
-                    peerAddress.getHostAddress(), peerPort, getTransport()));
-            }
+	            }
+	        } else {
+	            SipListener sipListener = sipStack.getSipListener();
+	            if(sipListener instanceof SipListenerExt) {
+	            	((SipListenerExt)sipListener).processIOException(new IOExceptionEventExt(this, Reason.KeepAliveTimeout, myAddress, myPort,
+	                    peerAddress.getHostAddress(), peerPort, getTransport()));
+	            }
+	        }
         }
     }
 
