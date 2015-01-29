@@ -599,9 +599,14 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                         }
                         
                         // No response received, we need to reconnect
-                        if(sipStack instanceof SipStackImpl) {
-                            for (Iterator<SipProviderImpl> it = ((SipStackImpl)sipStack).getSipProviders(); it.hasNext();) {
-                            	SipProviderImpl nextProvider = (SipProviderImpl) it.next();
+                        if(sipStack instanceof SipStackImpl) 
+                        {
+                        	Iterator<SipProviderImpl> it = 
+                        			 ((SipStackImpl)sipStack).getSipProviders();
+                        	
+                            while (it.hasNext()) {
+                            	SipProviderImpl nextProvider = 
+                            						(SipProviderImpl) it.next();
                             	nextProvider.handleConnectionFailed();
                             }
                         }
