@@ -1,5 +1,6 @@
 package gov.nist.core;
 
+import java.net.InetSocketAddress;
 import java.util.Properties;
 
 
@@ -15,27 +16,35 @@ public interface StackLogger extends LogLevels {
      * log a stack trace. This helps to look at the stack frame.
      */
 	public void logStackTrace();
-	
+
 	/**
-	 * Log a stack trace if the current logging level exceeds 
+	 * Log a stack trace if the current logging level exceeds
 	 * given trace level.
 	 * @param traceLevel
 	 */
 	public void logStackTrace(int traceLevel);
-	
+
 	/**
      * Get the line count in the log stream.
      *
      * @return
      */
 	public int getLineCount();
-	
+
 	/**
      * Log an exception.
      *
      * @param ex
      */
     public void logException(Throwable ex);
+    public void logSent(InetSocketAddress clientAddr,
+            InetSocketAddress serverAddr,
+            String transportType,
+            String body);
+    public void logReceived(InetSocketAddress clientAddr,
+            InetSocketAddress serverAddr,
+            String transportType,
+            String body);
     /**
      * Log a message into the log file.
      *
@@ -136,8 +145,8 @@ public interface StackLogger extends LogLevels {
      *            Throwable causing the error
      */
     public void logInfo(String string, Throwable cause);
-    
-   
+
+
     /**
      * Disable logging altogether.
      *
@@ -148,22 +157,28 @@ public interface StackLogger extends LogLevels {
      * Enable logging (globally).
      */
     public void enableLogging();
-    
+
     /**
      * Set the build time stamp. This is logged into the logging stream.
      */
     public void setBuildTimeStamp(String buildTimeStamp);
-    
+
     /**
      * Stack creation properties.
      * @param stackProperties
      */
-    
+
     public void setStackProperties(Properties stackProperties);
-    
+
     /**
      * The category for the logger.
      * @return
      */
     public String getLoggerName();
+
+    public static enum Direction
+    {
+        OUTBOUND,
+        INBOUND;
+    }
 }

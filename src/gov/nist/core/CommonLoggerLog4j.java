@@ -1,13 +1,13 @@
 /*
  * Conditions Of Use
- * 
+ *
  * This software was developed by employees of the National Institute of
  * Standards and Technology (NIST), an agency of the Federal Government.
  * Pursuant to title 15 Untied States Code Section 105, works of NIST employees
  * are not subject to copyright protection in the United States and are
  * considered to be in the public domain. As a result, a formal license is not
  * needed to use the software.
- * 
+ *
  * This software is provided by NIST as a service and is expressly provided
  * "AS IS." NIST MAKES NO WARRANTY OF ANY KIND, EXPRESS, IMPLIED OR STATUTORY,
  * INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTY OF MERCHANTABILITY,
@@ -15,7 +15,7 @@
  * does not warrant or make any representations regarding the use of the
  * software or the results thereof, including but not limited to the
  * correctness, accuracy, reliability or usefulness of the software.
- * 
+ *
  * Permission to use this software is contingent upon your acceptance of the
  * terms of this agreement.
  */
@@ -27,6 +27,7 @@ package gov.nist.core;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.InetSocketAddress;
 import java.util.Properties;
 
 import org.apache.log4j.Appender;
@@ -36,16 +37,15 @@ import org.apache.log4j.Logger;
 /**
  * A wrapper around log4j that is used for logging debug and errors. You can
  * replace this file if you want to change the way in which messages are logged.
- * 
+ *
  * @version 1.0
- * 
+ *
  * @author Vladimir Ralev
- * 
+ *
  */
 
 public class CommonLoggerLog4j implements StackLogger
 {
-
     /**
      * The logger to which we will write our logging output.
      */
@@ -90,7 +90,7 @@ public class CommonLoggerLog4j implements StackLogger
 
     /**
      * Get the line count in the log stream.
-     * 
+     *
      * @return
      */
     public int getLineCount()
@@ -100,7 +100,7 @@ public class CommonLoggerLog4j implements StackLogger
 
     /**
      * Get the logger.
-     * 
+     *
      * @return
      */
     public Logger getLogger()
@@ -111,7 +111,7 @@ public class CommonLoggerLog4j implements StackLogger
     /**
      * This method allows you to add an external appender. This is useful for
      * the case when you want to log to a different log stream than a file.
-     * 
+     *
      * @param appender
      */
     public void addAppender(Appender appender)
@@ -137,7 +137,7 @@ public class CommonLoggerLog4j implements StackLogger
 
     /**
      * Log a message into the log file.
-     * 
+     *
      * @param message message to log into the log file.
      */
     public void logTrace(String message)
@@ -147,7 +147,7 @@ public class CommonLoggerLog4j implements StackLogger
 
     /**
      * Log a message into the log file.
-     * 
+     *
      * @param message message to log into the log file.
      */
     public void logDebug(String message)
@@ -157,7 +157,7 @@ public class CommonLoggerLog4j implements StackLogger
 
     /**
      * Log an info message.
-     * 
+     *
      * @param string
      */
     public void logInfo(String string)
@@ -173,7 +173,7 @@ public class CommonLoggerLog4j implements StackLogger
 
     /**
      * Log a warning mesasge.
-     * 
+     *
      * @param string
      */
     public void logWarning(String string)
@@ -195,9 +195,9 @@ public class CommonLoggerLog4j implements StackLogger
 
     /**
      * Log an error message.
-     * 
+     *
      * @param message -- error message to log.
-     * 
+     *
      */
     public void logError(String message)
     {
@@ -206,7 +206,7 @@ public class CommonLoggerLog4j implements StackLogger
 
     /**
      * Log an error message.
-     * 
+     *
      * @param message
      * @param cause
      */
@@ -218,7 +218,7 @@ public class CommonLoggerLog4j implements StackLogger
 
     /**
      * Log an exception.
-     * 
+     *
      * @param ex
      */
     public void logException(Throwable ex)
@@ -228,7 +228,7 @@ public class CommonLoggerLog4j implements StackLogger
 
     /**
      * Log an error message.
-     * 
+     *
      * @param message -- error message to log.
      */
     public void logFatalError(String message)
@@ -252,7 +252,7 @@ public class CommonLoggerLog4j implements StackLogger
 
     /**
      * Return true/false if loging is enabled at a given level.
-     * 
+     *
      * @param logLevel
      */
     public boolean isLoggingEnabled(int logLevel)
@@ -262,7 +262,7 @@ public class CommonLoggerLog4j implements StackLogger
 
     /**
      * Disable logging altogether.
-     * 
+     *
      */
     public void disableLogging()
     {
@@ -343,5 +343,19 @@ public class CommonLoggerLog4j implements StackLogger
     public void setBuildTimeStamp(String buildTimeStamp)
     {
         getLogger().info("Build timestamp: " + buildTimeStamp);
+    }
+
+    @Override
+    public void logSent(InetSocketAddress clientAddr, InetSocketAddress serverAddr,
+            String transportType, String body)
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void logReceived(InetSocketAddress clientAddr, InetSocketAddress serverAddr,
+            String transportType, String body)
+    {
+        throw new UnsupportedOperationException();
     }
 }

@@ -1,5 +1,6 @@
 package gov.nist.core;
 
+import java.net.InetSocketAddress;
 import java.util.Properties;
 
 import org.apache.log4j.Logger;
@@ -8,9 +9,9 @@ import org.apache.log4j.Logger;
  * This class abstracts away single-instanct and multi0instance loggers
  * legacyLogger is the old-school one logger per stack reference otherLogger is
  * multiinstance logger
- * 
+ *
  * @author Vladimir Ralev
- * 
+ *
  */
 public class CommonLogger implements StackLogger
 {
@@ -173,5 +174,19 @@ public class CommonLogger implements StackLogger
     public void setStackProperties(Properties stackProperties)
     {
         legacyLogger.setStackProperties(stackProperties);
+    }
+
+    @Override
+    public void logSent(InetSocketAddress clientAddr, InetSocketAddress serverAddr,
+            String transportType, String body)
+    {
+        logger().logSent(clientAddr, serverAddr, transportType, body);
+    }
+
+    @Override
+    public void logReceived(InetSocketAddress clientAddr, InetSocketAddress serverAddr,
+            String transportType, String body)
+    {
+        logger().logReceived(clientAddr, serverAddr, transportType, body);
     }
 }

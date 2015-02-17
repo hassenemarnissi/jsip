@@ -115,7 +115,7 @@ public class SipProviderImpl implements javax.sip.SipProvider, gov.nist.javax.si
     private boolean automaticDialogSupportEnabled ;
 
     private boolean dialogErrorsAutomaticallyHandled = true;
-    
+
     /**
      * The registrar for this provider
      */

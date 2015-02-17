@@ -1,9 +1,11 @@
 package examples.nistgoodies.pluggablelogger;
 
+import gov.nist.core.LogLevels;
 import gov.nist.core.StackLogger;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Properties;
 
@@ -21,7 +23,7 @@ public class StackLoggerImpl implements StackLogger {
     private static HashMap<Integer,String> inverseLevelMap = new HashMap<Integer,String>();
 
     boolean enabled = true;
- 
+
     private static void putMap(String level, int jsipLevel) {
         levelMap.put(level, jsipLevel);
         inverseLevelMap.put(new Integer(jsipLevel), level);
@@ -41,7 +43,7 @@ public class StackLoggerImpl implements StackLogger {
         logger.setLevel(Level.DEBUG);
         logger.addAppender(new ConsoleAppender());
     }
- 
+
     public static void setLogger(Logger logger) {
         StackLoggerImpl.logger = logger;
     }
@@ -59,7 +61,7 @@ public class StackLoggerImpl implements StackLogger {
         return 0;
     }
 
-    public boolean isLoggingEnabled() {   
+    public boolean isLoggingEnabled() {
         return enabled;
     }
 
@@ -77,7 +79,7 @@ public class StackLoggerImpl implements StackLogger {
        logger.debug(string);
     }
 
-    public void logInfo(String string) { 
+    public void logInfo(String string) {
         logger.info(string);
     }
 
@@ -146,7 +148,6 @@ public class StackLoggerImpl implements StackLogger {
             logDebug(stackTrace);
 
         }
-        
     }
 
     public void logStackTrace(int level)
@@ -168,4 +169,15 @@ public class StackLoggerImpl implements StackLogger {
         return logger.getName();
     }
 
+    @Override
+    public void logSent(InetSocketAddress clientAddr, InetSocketAddress serverAddr,
+            String transportType, String body) {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void logReceived(InetSocketAddress clientAddr, InetSocketAddress serverAddr,
+            String transportType, String body) {
+        throw new UnsupportedOperationException();
+    }
 }

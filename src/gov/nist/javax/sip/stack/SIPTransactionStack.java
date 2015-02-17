@@ -1646,6 +1646,7 @@ public abstract class SIPTransactionStack implements
                 // JvB: Need to log before passing the response to the client
                 // app, it
                 // gets modified!
+                responseMessageChannel.logReceived(responseReceived);
                 if (this.logger.isLoggingEnabled(StackLogger.TRACE_INFO)) {
                     responseMessageChannel.logResponse(responseReceived, System
                             .currentTimeMillis(), "before processing");
@@ -1662,6 +1663,7 @@ public abstract class SIPTransactionStack implements
         boolean acquired = currentTransaction.acquireSem();
         // Set ths transaction's encapsulated response interface
         // from the superclass
+        responseMessageChannel.logReceived(responseReceived);
         if (this.logger.isLoggingEnabled(StackLogger.TRACE_INFO)) {
             currentTransaction.getMessageChannel().logResponse(responseReceived, System
                     .currentTimeMillis(), "before processing");

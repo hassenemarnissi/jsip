@@ -1,13 +1,13 @@
 /*
  * Conditions Of Use
- * 
+ *
  * This software was developed by employees of the National Institute of
  * Standards and Technology (NIST), an agency of the Federal Government.
  * Pursuant to title 15 Untied States Code Section 105, works of NIST employees
  * are not subject to copyright protection in the United States and are
  * considered to be in the public domain. As a result, a formal license is not
  * needed to use the software.
- * 
+ *
  * This software is provided by NIST as a service and is expressly provided
  * "AS IS." NIST MAKES NO WARRANTY OF ANY KIND, EXPRESS, IMPLIED OR STATUTORY,
  * INCLUDING, WITHOUT LIMITATION, THE IMPLIED WARRANTY OF MERCHANTABILITY,
@@ -15,7 +15,7 @@
  * does not warrant or make any representations regarding the use of the
  * software or the results thereof, including but not limited to the
  * correctness, accuracy, reliability or usefulness of the software.
- * 
+ *
  * Permission to use this software is contingent upon your acceptance of the
  * terms of this agreement.
  */
@@ -26,6 +26,7 @@
 package gov.nist.core;
 
 import java.io.*;
+import java.net.InetSocketAddress;
 import java.util.Properties;
 
 import org.apache.log4j.Appender;
@@ -38,14 +39,14 @@ import org.apache.log4j.SimpleLayout;
 /**
  * A wrapper around log4j that is used for logging debug and errors. You can
  * replace this file if you want to change the way in which messages are logged.
- * 
+ *
  * @version 1.2
- * 
+ *
  * @author M. Ranganathan <br/>
  * @author M.Andrews
  * @author Jeroen van Bemmel
  * @author Jean Deruelle
- * 
+ *
  */
 
 public class LogWriter implements StackLogger
@@ -128,7 +129,7 @@ public class LogWriter implements StackLogger
 
     /**
      * Get the line count in the log stream.
-     * 
+     *
      * @return
      */
     public int getLineCount()
@@ -138,7 +139,7 @@ public class LogWriter implements StackLogger
 
     /**
      * Get the logger.
-     * 
+     *
      * @return
      */
     public Logger getLogger()
@@ -149,7 +150,7 @@ public class LogWriter implements StackLogger
     /**
      * This method allows you to add an external appender. This is useful for
      * the case when you want to log to a different log stream than a file.
-     * 
+     *
      * @param appender
      */
     public void addAppender(Appender appender)
@@ -162,7 +163,7 @@ public class LogWriter implements StackLogger
     /**
      * Counts the line number so that the debug log can be correlated to the
      * message trace.
-     * 
+     *
      * @param message -- message to count the lines for.
      */
     private void countLines(String message)
@@ -178,7 +179,7 @@ public class LogWriter implements StackLogger
 
     /**
      * Prepend the line and file where this message originated from
-     * 
+     *
      * @param message
      * @return re-written message.
      */
@@ -374,7 +375,7 @@ public class LogWriter implements StackLogger
 
     /**
      * Return true/false if loging is enabled at a given level.
-     * 
+     *
      * @param logLevel
      */
     public boolean isLoggingEnabled(int logLevel)
@@ -384,7 +385,7 @@ public class LogWriter implements StackLogger
 
     /**
      * Disable logging altogether.
-     * 
+     *
      */
     public void disableLogging()
     {
@@ -468,7 +469,7 @@ public class LogWriter implements StackLogger
 
     /**
      * Log a message into the log file.
-     * 
+     *
      * @param message message to log into the log file.
      */
     public void logTrace(String message)
@@ -489,7 +490,7 @@ public class LogWriter implements StackLogger
 
     /**
      * Log a message into the log file.
-     * 
+     *
      * @param message message to log into the log file.
      */
     public void logDebug(String message)
@@ -511,7 +512,7 @@ public class LogWriter implements StackLogger
 
     /**
      * Log an info message.
-     * 
+     *
      * @param string
      */
     public void logInfo(String string)
@@ -527,7 +528,7 @@ public class LogWriter implements StackLogger
 
     /**
      * Log a warning mesasge.
-     * 
+     *
      * @param string
      */
     public void logWarning(String string)
@@ -549,9 +550,9 @@ public class LogWriter implements StackLogger
 
     /**
      * Log an error message.
-     * 
+     *
      * @param message -- error message to log.
-     * 
+     *
      */
     public void logError(String message)
     {
@@ -564,7 +565,7 @@ public class LogWriter implements StackLogger
 
     /**
      * Log an error message.
-     * 
+     *
      * @param message
      * @param cause
      */
@@ -576,7 +577,7 @@ public class LogWriter implements StackLogger
 
     /**
      * Log an exception.
-     * 
+     *
      * @param ex
      */
     public void logException(Throwable ex)
@@ -589,7 +590,7 @@ public class LogWriter implements StackLogger
 
     /**
      * Log an error message.
-     * 
+     *
      * @param message -- error message to log.
      */
     public void logFatalError(String message)
@@ -606,4 +607,17 @@ public class LogWriter implements StackLogger
         getLogger().fatal(message, cause);
     }
 
+    @Override
+    public void logSent(InetSocketAddress clientAddr, InetSocketAddress serverAddr,
+            String transportType, String body)
+    {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void logReceived(InetSocketAddress clientAddr, InetSocketAddress serverAddr,
+            String transportType, String body)
+    {
+        throw new UnsupportedOperationException();
+    }
 }

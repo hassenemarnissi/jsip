@@ -14,5 +14,4 @@ public interface LogLevels {
     public static final int TRACE_TRACE = 64;
     public static final int TRACE_MESSAGES = TRACE_INFO;
     public static final int TRACE_EXCEPTION = TRACE_ERROR;
-    
 }

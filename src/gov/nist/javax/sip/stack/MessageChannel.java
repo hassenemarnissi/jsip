@@ -36,6 +36,7 @@ import gov.nist.core.InternalErrorHandler;
 import gov.nist.core.LogWriter;
 import gov.nist.core.ServerLogger;
 import gov.nist.core.StackLogger;
+import gov.nist.core.StackLogger.Direction;
 import gov.nist.javax.sip.address.AddressImpl;
 import gov.nist.javax.sip.header.ContentLength;
 import gov.nist.javax.sip.header.ContentType;
@@ -47,6 +48,7 @@ import gov.nist.javax.sip.message.SIPResponse;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.text.ParseException;
 
 import javax.sip.address.Hop;
@@ -252,6 +254,11 @@ public abstract class MessageChannel {
             sipMessage.setRemotePort(hop.getPort());
             sipMessage.setLocalPort(this.getPort());
             sipMessage.setLocalAddress(this.getMessageProcessor().getIpAddress());
+            logger.logSent(new InetSocketAddress(sipMessage.getLocalAddress(), sipMessage.getLocalPort()),
+                           new InetSocketAddress(hopAddr, hop.getPort()),
+                           getTransport(),
+                           sipMessage.toString());
+
         } catch (IOException ioe) {
             throw ioe;
         } catch (Exception ex) {
@@ -288,6 +295,10 @@ public abstract class MessageChannel {
         sipMessage.setLocalAddress(this.getMessageProcessor().getIpAddress());
 
         //ready to log
+        logger.logSent(new InetSocketAddress(sipMessage.getLocalAddress(), sipMessage.getLocalPort()),
+                new InetSocketAddress(receiverAddress, receiverPort),
+                getTransport(),
+                sipMessage.toString());
         logMessage(sipMessage, receiverAddress, receiverPort, time);
     }
 
@@ -389,12 +400,26 @@ public abstract class MessageChannel {
     public void logMessage(SIPMessage sipMessage, InetAddress address, int port, long time) {
         if (!logger.isLoggingEnabled(ServerLogger.TRACE_MESSAGES))
             return;
-        
+
         // Default port.
         if (port == -1)
             port = 5060;
         getSIPStack().serverLogger.logMessage(sipMessage, this.getHost() + ":" + this.getPort(),
                 address.getHostAddress().toString() + ":" + port, true, time);
+    }
+    
+    public void logReceived(SIPResponse message)
+    {
+        int peerport = getPeerPort();
+        if (peerport == 0 && message.getContactHeaders() != null) {
+            ContactHeader contact = (ContactHeader) message.getContactHeaders().getFirst();
+            peerport = ((AddressImpl) contact.getAddress()).getPort();
+        }
+        
+        logger.logReceived(new InetSocketAddress(this.getHost(), this.getPort()), 
+                           new InetSocketAddress(this.getPeerInetAddress(), this.getPeerPort()), 
+                           getTransport(), 
+                           message.toString());
     }
 
     /**
