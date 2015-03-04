@@ -607,11 +607,7 @@ public class SipStackImpl extends SIPTransactionStack implements
 											// c++/Windows
 			// "TLS_RSA_WITH_3DES_EDE_CBC_SHA", // Unsupported by Sun impl,
 			"SSL_RSA_WITH_3DES_EDE_CBC_SHA", // For backwards comp., C++
-
-			// JvB: patch from Sebastien Mazy, issue with mismatching
-			// ciphersuites
-			"TLS_DH_anon_WITH_AES_128_CBC_SHA",
-			"SSL_DH_anon_WITH_3DES_EDE_CBC_SHA", };
+	};
 
 	// Supported protocols for TLS client: can be overridden by application
 	private String[] enabledProtocols = {
@@ -1431,7 +1427,7 @@ public class SipStackImpl extends SIPTransactionStack implements
 				"gov.nist.javax.sip.SSL_RENEGOTIATION_ENABLED",
 				"true"));
 
-		// Set the heartbeat interval upperbound for CRLF polling. The lower 
+		// Set the heartbeat interval upperbound for CRLF polling. The lower
 		// bound is 20% lower than this
 		int heartbeatUpperBound = Integer.parseInt(configurationProperties.getProperty(
 		                     "gov.nist.javax.sip.HEARTBEAT_UPPER_BOUND", "30"));
