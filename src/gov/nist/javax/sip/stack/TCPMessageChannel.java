@@ -79,7 +79,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
     	super(sipStack);
 
         // Start the keep alive process by scheduling a heartbeat
-        rescheduleHeartbeat(true);
+        rescheduleHeartbeat();
     }
 
     /**
@@ -124,7 +124,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
         mythread.start();
 
         // Start the keep alive process by scheduling a heartbeat
-        rescheduleHeartbeat(true);
+        rescheduleHeartbeat();
     }
 
     /**
@@ -159,7 +159,7 @@ public class TCPMessageChannel extends ConnectionOrientedMessageChannel {
         super.messageProcessor = messageProcessor;
 
         // Start the keep alive process by scheduling a heartbeat
-        rescheduleHeartbeat(true);
+        rescheduleHeartbeat();
     }
 
     /**

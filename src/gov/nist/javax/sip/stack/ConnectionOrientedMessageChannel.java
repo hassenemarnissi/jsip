@@ -121,7 +121,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
     		keepAliveSemaphore = new Semaphore(1);
     	}
 
-    	setKeepAliveTimeout(keepAliveTimeout);   
+    	setKeepAliveTimeout(keepAliveTimeout);
 	}
 
     /**
@@ -254,7 +254,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         sipMessage.setRemotePort(this.peerPort);
         sipMessage.setLocalAddress(this.getMessageProcessor().getIpAddress());
         sipMessage.setLocalPort(this.getPort());
-        
+
         if (logger.isLoggingEnabled(
                 ServerLogger.TRACE_MESSAGES))
             logMessage(sipMessage, peerAddress, peerPort, time);
@@ -597,15 +597,15 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                             close(true, true);
                         } catch (IOException ioex) {
                         }
-                        
+
                         // No response received, we need to reconnect
-                        if(sipStack instanceof SipStackImpl) 
+                        if(sipStack instanceof SipStackImpl)
                         {
-                        	Iterator<SipProviderImpl> it = 
+                        	Iterator<SipProviderImpl> it =
                         			 ((SipStackImpl)sipStack).getSipProviders();
-                        	
+
                             while (it.hasNext()) {
-                            	SipProviderImpl nextProvider = 
+                            	SipProviderImpl nextProvider =
                             						(SipProviderImpl) it.next();
                             	nextProvider.handleConnectionFailed();
                             }
@@ -649,10 +649,10 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
             	myParser.close();
             }
         }
-        
+
     }
 
-    
+
     protected void uncache() {
         if (isCached && !isRunning) {
         	((ConnectionOrientedMessageProcessor)this.messageProcessor).remove(this);
@@ -784,29 +784,27 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
      * chosen randomly between the upper and lower bounds defined in the SIP
      * stack properties (recommendations are given in RFC5626 section 4.4.1)
      */
-    protected void rescheduleHeartbeat(boolean sendNow)
+    protected void rescheduleHeartbeat()
     {
         SipTimer sipStackTimer = sipStack.getTimer();
 
         // We can't reschedule if we don't have a timer
         if (sipStackTimer == null)
         {
-        	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) 
+        	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
         	{
             	logger.logDebug("No timer so can't schedule CRLF heartbeat");
             }
             return;
         }
-        
-        int heartbeatDelay = 0;
-        if (!sendNow)
-        {
-            int lowerBound = getSIPStack().getHeartbeatLowerBound();
-            int upperBound = getSIPStack().getHeartbeatUpperBound();
 
-            heartbeatDelay = randomNumberGenerator.nextInt((upperBound - lowerBound) + 1) + lowerBound;
-        }
-        
+        int lowerBound = getSIPStack().getHeartbeatLowerBound();
+        int upperBound = getSIPStack().getHeartbeatUpperBound();
+
+        int heartbeatDelay = randomNumberGenerator.nextInt(
+                                    (upperBound - lowerBound) + 1) + lowerBound;
+
+
         if (sendHeartbeatTimerTask == null)
         {
             sendHeartbeatTimerTask = new SendHeartbeatTimerTask();
@@ -816,15 +814,15 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         if (sendHeartbeatTimerTask.getSipTimerTask() != null)
             sipStackTimer.cancel(sendHeartbeatTimerTask);
 
-        if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) 
+        if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
         	logger.logDebug("Scheduling CRLF heartbeat in " + heartbeatDelay + "s");
 
-        sipStackTimer.schedule(sendHeartbeatTimerTask, heartbeatDelay*1000);
+        sipStackTimer.schedule(sendHeartbeatTimerTask, heartbeatDelay * 1000);
     }
 
     /**
      * Reschedule the keep alive timeout for the provided interval
-     * @param newKeepAliveTimeout 
+     * @param newKeepAliveTimeout
      */
     public void rescheduleKeepAliveTimeout(long newKeepAliveTimeout) {
         long now = System.currentTimeMillis();
@@ -847,7 +845,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
             methodLog.append(", newScheduledTime=");
             methodLog.append(newScheduledTime);
         }
-        
+
         try {
 			keepAliveSemaphore.acquire();
 		} catch (InterruptedException e) {
@@ -855,7 +853,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
 			return;
 		}
 		try{
-			
+
 	        if(pingKeepAliveTimeoutTask == null) {
 	        	pingKeepAliveTimeoutTask = new KeepAliveTimeoutTimerTask();
 	        	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
@@ -884,7 +882,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
         	keepAliveSemaphore.release();
         }
     }
-    
+
     class KeepAliveTimeoutTimerTask extends SIPStackTimerTask {
 
         public void runTask() {
@@ -962,7 +960,7 @@ public abstract class ConnectionOrientedMessageChannel extends MessageChannel im
                 }
             }
 
-            rescheduleHeartbeat(false);
+            rescheduleHeartbeat();
         }
     }
 }

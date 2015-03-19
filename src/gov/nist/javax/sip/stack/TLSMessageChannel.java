@@ -72,11 +72,11 @@ import java.text.ParseException;
  * @version 1.2 $Revision: 1.43 $ $Date: 2010-12-02 22:44:53 $
  */
 public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
-    private static StackLogger logger = CommonLogger.getLogger(TLSMessageChannel.class);            
+    private static StackLogger logger = CommonLogger.getLogger(TLSMessageChannel.class);
 
     private HandshakeCompletedListener handshakeCompletedListener;
 	private boolean handshakeCompleted = false;
-   
+
     /**
      * Constructor - gets called from the SIPStack class with a socket on
      * accepting a new client. All the processing of the message is done here
@@ -97,7 +97,7 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
 
     protected TLSMessageChannel(Socket sock, SIPTransactionStack sipStack,
             TLSMessageProcessor msgProcessor, String threadName) throws IOException {
-    	
+
     	super(sipStack);
         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
             logger.logDebug(
@@ -133,7 +133,7 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
         mythread.start();
 
         // Start the keep alive process by scheduling a heartbeat
-        rescheduleHeartbeat(true);
+        rescheduleHeartbeat();
     }
 
     /**
@@ -151,7 +151,7 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
     protected TLSMessageChannel(InetAddress inetAddr, int port,
             SIPTransactionStack sipStack, TLSMessageProcessor messageProcessor)
             throws IOException {
-    	
+
     	super(sipStack);
         if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
             logger.logDebug(
@@ -168,17 +168,17 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
         super.messageProcessor = messageProcessor;
 
         // Start the keep alive process by scheduling a heartbeat
-        rescheduleHeartbeat(true);
+        rescheduleHeartbeat();
 
-    }   
+    }
 
     /**
      * Close the message channel.
      */
-    public void close(boolean removeSocket, boolean stopKeepAliveTask) {  
+    public void close(boolean removeSocket, boolean stopKeepAliveTask) {
 		isRunning = false;
     	// we need to close everything because the socket may be closed by the other end
-    	// like in LB scenarios sending OPTIONS and killing the socket after it gets the response    	
+    	// like in LB scenarios sending OPTIONS and killing the socket after it gets the response
         if (mySock != null) {
         	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
                 logger.logDebug("Closing socket " + key);
@@ -188,13 +188,13 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
                 if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
                     logger.logDebug("Error closing socket " + ex);
             }
-        }        
+        }
         if(myParser != null) {
         	if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
                 logger.logDebug("Closing my parser " + myParser);
-            myParser.close();            
-        }           
-        if(removeSocket) {    
+            myParser.close();
+        }
+        if(removeSocket) {
 	        // remove the "tls:" part of the key to cleanup the ioHandler hashmap
 	        String ioHandlerKey = key.substring(4);
 	        if (logger.isLoggingEnabled(LogWriter.TRACE_DEBUG))
@@ -213,8 +213,8 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
     	}
         if(stopKeepAliveTask) {
 			cancelPingKeepAliveTimeoutTaskIfStarted();
-		}	    	        
-    }    
+		}
+    }
 
     /**
      * get the transport string.
@@ -223,7 +223,7 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
      */
     public String getTransport() {
         return "TLS";
-    }    
+    }
 
     /**
      * Send message to whoever is connected to us. Uses the topmost via address
@@ -250,11 +250,11 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
         	logger.logError("Error is ", any);
         }
         if(sock == null) { // http://java.net/jira/browse/JSIP-362 If we couldn't connect to the host, try the advertised host:port as failsafe
-        	if(peerAddressAdvertisedInHeaders  != null && peerPortAdvertisedInHeaders > 0) { 
+        	if(peerAddressAdvertisedInHeaders  != null && peerPortAdvertisedInHeaders > 0) {
                 logger.logWarning("Couldn't connect to peerAddress = " + peerAddress + " peerPort = " + peerPort + " key = " + key +  " retrying on peerPortAdvertisedInHeaders " + peerPortAdvertisedInHeaders);
                 InetAddress address = InetAddress.getByName(peerAddressAdvertisedInHeaders);
                 sock = this.sipStack.ioHandler.sendBytes(this.messageProcessor.getIpAddress(),
-                    address, this.peerPortAdvertisedInHeaders, this.peerProtocol, msg, retry, this);        		
+                    address, this.peerPortAdvertisedInHeaders, this.peerProtocol, msg, retry, this);
         		this.peerPort = this.peerPortAdvertisedInHeaders;
         		this.peerAddress = address;
         		this.key = MessageChannel.getKey(peerAddress, peerPort, "TLS");
@@ -275,14 +275,14 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
    		             logger.logWarning(
    		            		 "Old socket local ip address " + mySock.getLocalSocketAddress());
    		             logger.logWarning(
-   		            		 "Old socket remote ip address " + mySock.getRemoteSocketAddress());                         
+   		            		 "Old socket remote ip address " + mySock.getRemoteSocketAddress());
    		             logger.logWarning(
    		            		 "New socket local ip address " + sock.getLocalSocketAddress());
    		             logger.logWarning(
    		            		 "New socket remote ip address " + sock.getRemoteSocketAddress());
           		 }
           		 close(false, false);
-          	}    
+          	}
           	if(problem == null) {
           		if(mySock != null) {
    	        		if(logger.isLoggingEnabled(LogWriter.TRACE_WARN)) {
@@ -327,8 +327,8 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
         if(peerPortAdvertisedInHeaders <= 0) {
         	if(logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
             	logger.logDebug("receiver port = " + receiverPort + " for this channel " + this + " key " + key);
-            }        	
-        	if(receiverPort <=0) {    
+            }
+        	if(receiverPort <=0) {
         		// if port is 0 we assume the default port for TCP
         		this.peerPortAdvertisedInHeaders = 5060;
         	} else {
@@ -336,9 +336,9 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
         	}
         	if(logger.isLoggingEnabled(LogWriter.TRACE_DEBUG)) {
             	logger.logDebug("2.Storing peerPortAdvertisedInHeaders = " + peerPortAdvertisedInHeaders + " for this channel " + this + " key " + key);
-            }	        
+            }
         }
-        
+
         Socket sock = null;
         IOException problem = null;
         try {
@@ -348,8 +348,8 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
         	problem = any;
         	logger.logWarning("Failed to connect "
         			+ this.peerAddress + ":" + receiverPort +
-        			" but trying the advertised port=" + 
-        			this.peerPortAdvertisedInHeaders + 
+        			" but trying the advertised port=" +
+        			this.peerPortAdvertisedInHeaders +
         			" if it's different than the port we just failed on, rcv addr=" +
         			receiverAddress + ", port=" + receiverPort);
         	logger.logError("Error is ", any);
@@ -363,7 +363,7 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
         		this.peerPort = this.peerPortAdvertisedInHeaders;
         		this.peerAddress = address;
         		this.key = MessageChannel.getKey(peerAddress, peerPortAdvertisedInHeaders, "TLS");
-                
+
                 logger.logWarning("retry suceeded to receiverAddress = " + receiverAddress + " peerPortAdvertisedInHeaders = " + peerPortAdvertisedInHeaders + " key = " + key);
         	} else {
         		throw problem; // throw the original excpetion we had from the first attempt
@@ -372,7 +372,7 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
         //
         // Created a new socket so close the old one and s
         // Check for null (bug fix sent in by Christophe)
-        if (sock != mySock && sock != null) {        	        	
+        if (sock != mySock && sock != null) {
             if (mySock != null) {
             	if(logger.isLoggingEnabled(LogWriter.TRACE_WARN)) {
        			 	 logger.logWarning(
@@ -381,7 +381,7 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
 		             logger.logWarning(
 		            		 "Old socket local ip address " + mySock.getLocalSocketAddress());
 		             logger.logWarning(
-		            		 "Old socket remote ip address " + mySock.getRemoteSocketAddress());                         
+		            		 "Old socket remote ip address " + mySock.getRemoteSocketAddress());
 		             logger.logWarning(
 		            		 "New socket local ip address " + sock.getLocalSocketAddress());
 		             logger.logWarning(
@@ -475,7 +475,7 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
         } else {
             sipMessage.addUnparsed(header);
         }
-    }       
+    }
 
     /**
      * Equals predicate.
@@ -514,35 +514,35 @@ public class TLSMessageChannel extends ConnectionOrientedMessageChannel {
      */
     public HandshakeCompletedListenerImpl getHandshakeCompletedListener() {
         return (HandshakeCompletedListenerImpl) handshakeCompletedListener;
-    }  
-    
+    }
+
     @Override
     public void run() {
-    	// http://java.net/jira/browse/JSIP-415 
+    	// http://java.net/jira/browse/JSIP-415
     	// moved from constructor to the TCPMessageChannel thread to avoid blocking the Processor if the handshake is stuck because of a bad client
     	if (mySock!= null && mySock instanceof SSLSocket && !handshakeCompleted) {
     		SSLSocket sslSock = (SSLSocket) mySock;
     		HandshakeCompletedListenerImpl listener = new HandshakeCompletedListenerImpl(this, sslSock);
             this.handshakeCompletedListener = listener;
             sslSock.addHandshakeCompletedListener(this.handshakeCompletedListener);
-            listener.startHandshakeWatchdog();			
+            listener.startHandshakeWatchdog();
 			try {
 				sslSock.startHandshake();
 				handshakeCompleted = true;
 				if(!getSIPStack().isSslRenegotiationEnabled()) {
-					/* 
+					/*
 					 * disable TLS re-negotiations to avoid DOS attack
-					 *  http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2011-1473 
+					 *  http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2011-1473
 					 *  http://www.ietf.org/mail-archive/web/tls/current/msg07553.html
-					 *  http://192.9.162.55/javase/javaseforbusiness/docs/TLSReadme.html 
-					 *  */ 
-					sslSock.getSession().invalidate(); 
+					 *  http://192.9.162.55/javase/javaseforbusiness/docs/TLSReadme.html
+					 *  */
+					sslSock.getSession().invalidate();
 					sslSock.setEnableSessionCreation(false);
 				}
 			} catch (IOException e) {
 				logger.logError("A problem occured while Accepting connection", e);
 				return;
-			}			
+			}
         }
     	super.run();
     }
